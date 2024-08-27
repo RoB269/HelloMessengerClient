@@ -37,7 +37,6 @@ public class RSA {
         BigInteger[] integerString = new BigInteger[(int) Math.ceil(string.length()/(double) MAX_PACKAGE_SIZE)];
         Arrays.fill(integerString, BigInteger.ZERO);
         byte[] byteString = string.getBytes();
-        System.out.println(Arrays.toString(byteString));
         int j;
         for (int i = 0; i < byteString.length; i++) {
             j = i/MAX_PACKAGE_SIZE;
@@ -68,7 +67,6 @@ public class RSA {
         for (int i = 0; i < byteString.size(); i++) {
             bytes[i] = byteString.get(i);
         }
-        System.out.println(Arrays.toString(bytes));
         return new String(bytes);
     }
 

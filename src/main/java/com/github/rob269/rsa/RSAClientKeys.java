@@ -32,9 +32,9 @@ public class RSAClientKeys {
     }
 
     private static void writeNewKeys() {
-        BigInteger[][] keys = RSA.generateKeys(512);
+        BigInteger[][] keys = RSA.generateKeys();
         RSAClientKeys.userKeys = new RSAKeys(keys, user);
-        ResourcesInterface.writeJSON("RSA/serverKeys.json", userKeys);
+        ResourcesInterface.writeJSON("RSA/userKeys.json", userKeys);
         LOGGER.fine("The keys were generated and written down");
     }
 

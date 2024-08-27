@@ -11,7 +11,7 @@ import java.util.logging.Logger;
 
 public class ResourcesInterface {
     private static final Logger LOGGER = Logger.getLogger(Thread.currentThread().getName() + ":" + ResourcesInterface.class.getName());
-    public static final String ROOT_FOLDER = "data/";
+    public static final String ROOT_FOLDER = "resources/";
     public static final String EXTENSION = ".json";
 
     public static List<String> read(String filePath) {

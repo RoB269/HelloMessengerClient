@@ -1,29 +1,29 @@
 package com.github.rob269.io;
 
 import com.github.rob269.User;
-import com.github.rob269.rsa.Key;
-import com.github.rob269.rsa.RSA;
-import com.github.rob269.rsa.RSAKeys;
-import com.github.rob269.rsa.RSAClientKeys;
+import com.github.rob269.rsa.*;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.math.BigInteger;
 import java.net.Socket;
 import java.util.*;
 import java.util.logging.Logger;
 
-public class ServerInterface implements AutoCloseable{
-    private OutputStreamWriter osw;
-    private Scanner scanner;
+public class ServerInterface implements AutoCloseable {
+    private DataOutputStream dos;
+    private DataInputStream dis;
     private Key serverKey;
+    private boolean isClosed = false;
+    private boolean initialized = false;
 
     private static final Logger LOGGER = Logger.getLogger(Thread.currentThread().getName() + ":" + ServerInterface.class.getName());
 
     public ServerInterface(Socket clientSocket) {
         try {
-            osw = new OutputStreamWriter(clientSocket.getOutputStream());
-            scanner = new Scanner(clientSocket.getInputStream());
+            dos = new DataOutputStream(clientSocket.getOutputStream());
+            dis = new DataInputStream(clientSocket.getInputStream());
             LOGGER.fine("Output and Input streams is open");
         } catch (IOException e) {
             LOGGER.warning("Can't open streams");
@@ -31,33 +31,83 @@ public class ServerInterface implements AutoCloseable{
         }
     }
 
-    public void init() {
+    public void init() throws WrongKeyException {
         write("GET RSA KEY");
         List<String> keyString = read();
-        serverKey = new Key(new BigInteger[]{
-                new BigInteger(keyString.getFirst()),
-                new BigInteger(keyString.get(1))
-        }, new User(keyString.getLast()));
-        serverKey.setMeta(new BigInteger[]{
-                new BigInteger(keyString.get(2)),
-                new BigInteger(keyString.get(3))
-        });
-        if (RSAKeys.isKey(serverKey)) {
-            write("KEY");
-            Key clientKey = RSAClientKeys.getPublicKey();
-            List<String> key = new ArrayList<>(List.of(clientKey.getKey()[0].toString(), clientKey.getKey()[1].toString(),
-                    clientKey.getMeta()[0].toString(), clientKey.getMeta()[1].toString(), RSA.encodeString(clientKey.getUser().getId(), serverKey)));
-            write(key);
+
+        if (keyString.size() >= 5) {
+            serverKey = new Key(new BigInteger[]{
+                    new BigInteger(keyString.getFirst()),
+                    new BigInteger(keyString.get(1))
+            }, new User(keyString.get(4)));
+            serverKey.setMeta(new BigInteger[]{
+                    new BigInteger(keyString.get(2)),
+                    new BigInteger(keyString.get(3))
+            });
+            if (RSAKeys.isKey(serverKey)) {
+                write("KEY");
+                Key clientKey = RSAClientKeys.getPublicKey();
+                List<String> key = new ArrayList<>(List.of(clientKey.getKey()[0].toString(), clientKey.getKey()[1].toString(),
+                        clientKey.getMeta()[0].toString(), clientKey.getMeta()[1].toString(), RSA.encodeString(clientKey.getUser().getId(), serverKey)));
+                write(key);
+                if (checkInitialization()) {
+                    initialized = true;
+                    LOGGER.info("YEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE");
+                    close();//todo
+                }
+                else {
+                    LOGGER.warning("Fail initialization");
+                    close();
+                    //todo
+                }
+            } else {
+                throw new WrongKeyException("Wrong server key");
+            }
         }
         else {
-            LOGGER.warning("Wrong server key");
+            LOGGER.warning("Wrong key format");
         }
+    }
+
+    private boolean checkInitialization() {
+        if (RSA.decodeString(readFirst(), RSAClientKeys.getPrivateKey()).equals("INITIALIZED")) {
+            write(RSA.encodeString("INITIALIZED", serverKey));
+            return RSA.decodeString(readFirst(), RSAClientKeys.getPrivateKey()).equals("OK");
+        }
+        return false;
+    }
+
+    public boolean isClosed() {
+        return isClosed;
+    }
+
+    public Key getServerKey() {
+        return serverKey;
+    }
+
+    public String readFirst(){
+        List<String> list = read();
+        if (!list.isEmpty()) {
+            return list.getFirst();
+        }
+        return "";
     }
 
     public List<String> read() {
         List<String> lines = new ArrayList<>();
-        while (scanner.hasNext()) {
-            lines.add(scanner.nextLine());
+        try {
+            String inputString = dis.readUTF();
+            if (initialized) {
+                inputString = RSA.decodeString(inputString, RSAClientKeys.getPrivateKey());
+            }
+            lines = new ArrayList<>(List.of(inputString.split("\n")));
+            StringBuilder stringBuilder = new StringBuilder();
+            for (String line : lines)
+                stringBuilder.append(line).append("\n");
+            LOGGER.finer("Get message: " + stringBuilder);
+        } catch (IOException e) {
+            LOGGER.warning("Can't read lines");
+            e.printStackTrace();
         }
         return lines;
     }
@@ -68,11 +118,13 @@ public class ServerInterface implements AutoCloseable{
             return;
         }
         try {
-            osw.write(message);
-            osw.flush();
-            LOGGER.fine("Message sent");
+            if (initialized)
+                message = RSA.encodeString(message, serverKey);
+            dos.writeUTF(message);
+            dos.flush();
+            LOGGER.finer("Message sent:\n" + message);
         } catch (IOException e) {
-            LOGGER.warning("Can't write the message by outputStreamWriter");
+            LOGGER.warning("Can't send the message");
             e.printStackTrace();
         }
     }
@@ -82,26 +134,26 @@ public class ServerInterface implements AutoCloseable{
             LOGGER.warning("Null message");
             return;
         }
-        for (int i = 0; i < lines.size(); i++) {
-            try {
-                osw.write(lines.get(i) + "\n");
-            } catch (IOException e) {
-                LOGGER.warning("Can't send message");
-                e.printStackTrace();
-            }
-        }
+        StringBuilder stringBuilder = new StringBuilder();
+        for (String line : lines)
+            stringBuilder.append(line).append("\n");
+        String message = stringBuilder.toString();
+        LOGGER.finer("Sending message:\n" + message);
         try {
-            osw.flush();
+            if (initialized) message = RSA.encodeString(message, serverKey);
+            dos.writeUTF(message);
+            dos.flush();
         } catch (IOException e) {
-            LOGGER.warning("Can't flush message");
+            LOGGER.warning("Can't send the message");
             e.printStackTrace();
         }
     }
 
     public void close() {
+        isClosed = true;
         try {
-            scanner.close();
-            osw.close();
+            dis.close();
+            dos.close();
         } catch (IOException e) {
             LOGGER.warning("Can't close streams");
             e.printStackTrace();
