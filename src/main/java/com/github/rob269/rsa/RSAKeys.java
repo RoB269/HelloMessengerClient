@@ -1,30 +1,31 @@
 package com.github.rob269.rsa;
 
 import com.github.rob269.User;
+import com.github.rob269.UserAccount;
 import com.google.gson.annotations.SerializedName;
 
 import java.math.BigInteger;
 
 public class RSAKeys {
     @SerializedName("public_key")
-    private Key publicKey;
+    private UserKey publicKey;
     @SerializedName("private_key")
     private final Key privateKey;
     private final User user;
 
-    public RSAKeys(Key publicKey, Key privateKey, User user) {
+    public RSAKeys(UserKey publicKey, Key privateKey, User user) {
         this.publicKey = publicKey;
         this.privateKey = privateKey;
         this.user = user;
     }
 
     public RSAKeys(BigInteger[][] keys, User user) {
-        this.publicKey = new Key(keys[0], user);
-        this.privateKey = new Key(keys[1], user);
+        this.publicKey = new UserKey(keys[0], user);
+        this.privateKey = new Key(keys[1]);
         this.user = user;
     }
 
-    public Key getPublicKey() {
+    public UserKey getPublicKey() {
         return publicKey;
     }
 
@@ -32,7 +33,7 @@ public class RSAKeys {
         return privateKey;
     }
 
-    public void setPublicKey(Key publicKey) {
+    public void setPublicKey(UserKey publicKey) {
         this.publicKey = publicKey;
     }
 
@@ -40,7 +41,7 @@ public class RSAKeys {
         return user;
     }
 
-    public static boolean isKey(Key key) {
+    public static boolean isKey(UserKey key) {
         BigInteger[] meta = key.getMeta();
         BigInteger[] keyData = key.getKey();
         BigInteger one = (new BigInteger(RSA.decode(meta[0], Guarantor.getPublicKey())).subtract(keyData[0]));
@@ -49,7 +50,7 @@ public class RSAKeys {
     }
 
     public static boolean isKeys(RSAKeys keys) {
-        if (isKey(keys.getPublicKey()) && isKey(keys.getPrivateKey())) {
+        if (isKey(keys.getPublicKey())) {
             String a = RSA.encode(1, keys.getPublicKey());
             String b = RSA.decode(a, keys.getPrivateKey());
             return "1".equals(b);

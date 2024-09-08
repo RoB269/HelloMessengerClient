@@ -14,7 +14,7 @@ import java.util.logging.Logger;
 public class ServerIO implements AutoCloseable {
     private DataOutputStream dos;
     private DataInputStream dis;
-    private static Key serverKey;
+    private static UserKey serverKey;
     private boolean isClosed = false;
     private boolean initialized = false;
 
@@ -31,9 +31,9 @@ public class ServerIO implements AutoCloseable {
         }
     }
 
-    private Key registerKey() throws ServerResponseException, WrongKeyException {
+    private UserKey registerKey() throws ServerResponseException, WrongKeyException {
         write("REGISTER NEW KEY");
-        Key publicKey = RSAClientKeys.getPublicKey();
+        UserKey publicKey = RSAClientKeys.getPublicKey();
         List<String> message = List.of(publicKey.getKey()[0].toString(), publicKey.getKey()[1].toString(), RSA.encodeString(publicKey.getUser().getId(), serverKey));
         write(message);
         List<String> response = read();
@@ -43,7 +43,7 @@ public class ServerIO implements AutoCloseable {
         else if (response.getFirst().equals("META")) {
             response = read();
             if (response.size() == 2) {
-                Key key = RSAClientKeys.getPublicKey();
+                UserKey key = RSAClientKeys.getPublicKey();
                 key.setMeta(new BigInteger[]{new BigInteger(response.getFirst()), new BigInteger(response.get(1))});
                 return key;
             }
@@ -58,7 +58,7 @@ public class ServerIO implements AutoCloseable {
         write("GET RSA KEY");
         List<String> keyString = read();
         if (keyString.size() >= 5) {
-            serverKey = new Key(new BigInteger[]{
+            serverKey = new UserKey(new BigInteger[]{
                     new BigInteger(keyString.getFirst()),
                     new BigInteger(keyString.get(1))
             }, new User(keyString.get(4)));
@@ -83,7 +83,7 @@ public class ServerIO implements AutoCloseable {
             RSAClientKeys.register(registerKey());
         }
         write("KEY");
-        Key clientKey = RSAClientKeys.getPublicKey();
+        UserKey clientKey = RSAClientKeys.getPublicKey();
         List<String> key = new ArrayList<>(List.of(clientKey.getKey()[0].toString(), clientKey.getKey()[1].toString(),
                 clientKey.getMeta()[0].toString(), clientKey.getMeta()[1].toString(), RSA.encodeString(clientKey.getUser().getId(), serverKey)));
         write(key);

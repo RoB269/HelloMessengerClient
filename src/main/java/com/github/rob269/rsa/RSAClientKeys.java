@@ -1,6 +1,7 @@
 package com.github.rob269.rsa;
 
 import com.github.rob269.User;
+import com.github.rob269.UserAccount;
 import com.github.rob269.io.ResourcesIO;
 
 import java.math.BigInteger;
@@ -8,7 +9,7 @@ import java.util.logging.Logger;
 
 public class RSAClientKeys {
     private static RSAKeys userKeys;
-    private static final User user = new User("#USER1#"); //todo
+    private static final User user = new UserAccount("#USER#", "#TestPassword#"); //todo
     private static final Logger LOGGER = Logger.getLogger(Thread.currentThread().getName() + ":" + RSAClientKeys.class.getName());
     private static boolean needToRegister = false;
 
@@ -32,7 +33,7 @@ public class RSAClientKeys {
         LOGGER.fine("The keys have been initialized");
     }
 
-    public static void register(Key key) throws WrongKeyException{
+    public static void register(UserKey key) throws WrongKeyException{
         if (key != null && needToRegister){
             userKeys.setPublicKey(key);
             ResourcesIO.writeJSON("RSA/userKeys" + ResourcesIO.EXTENSION, userKeys);
@@ -56,7 +57,7 @@ public class RSAClientKeys {
         LOGGER.fine("The keys were generated");
     }
 
-    public static Key getPublicKey() {
+    public static UserKey getPublicKey() {
         return userKeys.getPublicKey();
     }
 
