@@ -1,6 +1,7 @@
 package com.github.rob269;
 
-import com.github.rob269.io.ServerInterface;
+import com.github.rob269.io.ServerIO;
+import com.github.rob269.io.ServerResponseException;
 import com.github.rob269.rsa.RSAClientKeys;
 import com.github.rob269.rsa.WrongKeyException;
 
@@ -19,16 +20,22 @@ public class Main {
     private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
 
     public static void main(String[] args) {
+        serverConnect();
+    }
+
+    public static void serverConnect() {
         RSAClientKeys.initKeys();
         try (Socket clientSocket = new Socket("127.0.0.1", 5099);
-            ServerInterface serverInterface = new ServerInterface(clientSocket)){
-            serverInterface.init();
-            if (!serverInterface.isClosed()) LOGGER.info("YEEEEEEEEE");
+             ServerIO serverIO = new ServerIO(clientSocket)){
+            serverIO.init();
+            if (!serverIO.isClosed()) LOGGER.info("YEEEEEEEEE");
         } catch (IOException e) {
-            throw new RuntimeException(e);
-        } catch (WrongKeyException e) {
-            LOGGER.warning("Wrong server key");
+            LOGGER.warning("Can't connect to server");
             e.printStackTrace();
+        } catch (WrongKeyException e) {
+            e.printStackTrace();
+        } catch (ServerResponseException e) {
+            LOGGER.warning("Wrong server response");
         }
     }
 }

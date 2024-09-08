@@ -11,16 +11,16 @@ import java.net.Socket;
 import java.util.*;
 import java.util.logging.Logger;
 
-public class ServerInterface implements AutoCloseable {
+public class ServerIO implements AutoCloseable {
     private DataOutputStream dos;
     private DataInputStream dis;
-    private Key serverKey;
+    private static Key serverKey;
     private boolean isClosed = false;
     private boolean initialized = false;
 
-    private static final Logger LOGGER = Logger.getLogger(Thread.currentThread().getName() + ":" + ServerInterface.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(Thread.currentThread().getName() + ":" + ServerIO.class.getName());
 
-    public ServerInterface(Socket clientSocket) {
+    public ServerIO(Socket clientSocket) {
         try {
             dos = new DataOutputStream(clientSocket.getOutputStream());
             dis = new DataInputStream(clientSocket.getInputStream());
@@ -31,10 +31,32 @@ public class ServerInterface implements AutoCloseable {
         }
     }
 
-    public void init() throws WrongKeyException {
+    private Key registerKey() throws ServerResponseException, WrongKeyException {
+        write("REGISTER NEW KEY");
+        Key publicKey = RSAClientKeys.getPublicKey();
+        List<String> message = List.of(publicKey.getKey()[0].toString(), publicKey.getKey()[1].toString(), RSA.encodeString(publicKey.getUser().getId(), serverKey));
+        write(message);
+        List<String> response = read();
+        if (response.getFirst().equals("KEY IS REJECTED")) {
+            throw new WrongKeyException("Key is rejected");
+        }
+        else if (response.getFirst().equals("META")) {
+            response = read();
+            if (response.size() == 2) {
+                Key key = RSAClientKeys.getPublicKey();
+                key.setMeta(new BigInteger[]{new BigInteger(response.getFirst()), new BigInteger(response.get(1))});
+                return key;
+            }
+            else {
+                LOGGER.warning("Wrong meta format");
+            }
+        }
+        return null;
+    }
+
+    private void gerServerKey() throws WrongKeyException, ServerResponseException {
         write("GET RSA KEY");
         List<String> keyString = read();
-
         if (keyString.size() >= 5) {
             serverKey = new Key(new BigInteger[]{
                     new BigInteger(keyString.getFirst()),
@@ -44,32 +66,40 @@ public class ServerInterface implements AutoCloseable {
                     new BigInteger(keyString.get(2)),
                     new BigInteger(keyString.get(3))
             });
-            if (RSAKeys.isKey(serverKey)) {
-                write("KEY");
-                Key clientKey = RSAClientKeys.getPublicKey();
-                List<String> key = new ArrayList<>(List.of(clientKey.getKey()[0].toString(), clientKey.getKey()[1].toString(),
-                        clientKey.getMeta()[0].toString(), clientKey.getMeta()[1].toString(), RSA.encodeString(clientKey.getUser().getId(), serverKey)));
-                write(key);
-                if (checkInitialization()) {
-                    initialized = true;
-                    LOGGER.info("YEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE");
-                    close();//todo
-                }
-                else {
-                    LOGGER.warning("Fail initialization");
-                    close();
-                    //todo
-                }
-            } else {
+            if (!RSAKeys.isKey(serverKey)) {
                 throw new WrongKeyException("Wrong server key");
             }
-        }
-        else {
+        } else {
             LOGGER.warning("Wrong key format");
+            throw new WrongKeyException("Wrong key format");
         }
     }
 
-    private boolean checkInitialization() {
+    public void init() throws WrongKeyException, ServerResponseException {
+        if (serverKey == null){
+            gerServerKey();
+        }
+        if (RSAClientKeys.isNeedToRegister()) {
+            RSAClientKeys.register(registerKey());
+        }
+        write("KEY");
+        Key clientKey = RSAClientKeys.getPublicKey();
+        List<String> key = new ArrayList<>(List.of(clientKey.getKey()[0].toString(), clientKey.getKey()[1].toString(),
+                clientKey.getMeta()[0].toString(), clientKey.getMeta()[1].toString(), RSA.encodeString(clientKey.getUser().getId(), serverKey)));
+        write(key);
+        if (checkInitialization()) {
+            initialized = true;
+            LOGGER.info("YEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE");
+            close();//todo
+        }
+        else {
+            LOGGER.warning("Fail initialization");
+            close();
+            //todo
+        }
+    }
+
+    private boolean checkInitialization() throws ServerResponseException{
         if (RSA.decodeString(readFirst(), RSAClientKeys.getPrivateKey()).equals("INITIALIZED")) {
             write(RSA.encodeString("INITIALIZED", serverKey));
             return RSA.decodeString(readFirst(), RSAClientKeys.getPrivateKey()).equals("OK");
@@ -85,7 +115,7 @@ public class ServerInterface implements AutoCloseable {
         return serverKey;
     }
 
-    public String readFirst(){
+    public String readFirst() throws ServerResponseException{
         List<String> list = read();
         if (!list.isEmpty()) {
             return list.getFirst();
@@ -93,7 +123,7 @@ public class ServerInterface implements AutoCloseable {
         return "";
     }
 
-    public List<String> read() {
+    public List<String> read() throws ServerResponseException{
         List<String> lines = new ArrayList<>();
         try {
             String inputString = dis.readUTF();
@@ -109,6 +139,7 @@ public class ServerInterface implements AutoCloseable {
             LOGGER.warning("Can't read lines");
             e.printStackTrace();
         }
+        if (lines.isEmpty() || lines.getFirst().equals("500 ERROR")) throw new ServerResponseException("Server response error");
         return lines;
     }
 

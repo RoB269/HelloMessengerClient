@@ -1,7 +1,6 @@
 package com.github.rob269.rsa;
 
 import com.github.rob269.User;
-import com.github.rob269.io.ResourcesInterface;
 
 import java.math.BigInteger;
 

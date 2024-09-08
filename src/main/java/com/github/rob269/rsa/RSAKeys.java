@@ -1,14 +1,13 @@
 package com.github.rob269.rsa;
 
 import com.github.rob269.User;
-import com.github.rob269.io.ResourcesInterface;
 import com.google.gson.annotations.SerializedName;
 
 import java.math.BigInteger;
 
 public class RSAKeys {
     @SerializedName("public_key")
-    private final Key publicKey;
+    private Key publicKey;
     @SerializedName("private_key")
     private final Key privateKey;
     private final User user;
@@ -31,6 +30,10 @@ public class RSAKeys {
 
     public Key getPrivateKey() {
         return privateKey;
+    }
+
+    public void setPublicKey(Key publicKey) {
+        this.publicKey = publicKey;
     }
 
     public User getUser() {
