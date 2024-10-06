@@ -1,7 +1,6 @@
 package com.github.rob269.rsa;
 
 import com.github.rob269.User;
-import com.github.rob269.UserAccount;
 import com.google.gson.annotations.SerializedName;
 
 import java.math.BigInteger;

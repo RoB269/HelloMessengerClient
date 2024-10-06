@@ -1,6 +1,5 @@
 package com.github.rob269.rsa;
 
-import com.github.rob269.User;
 import com.github.rob269.UserAccount;
 import com.github.rob269.io.ResourcesIO;
 
@@ -9,7 +8,7 @@ import java.util.logging.Logger;
 
 public class RSAClientKeys {
     private static RSAKeys userKeys;
-    private static final User user = new UserAccount("#USER#", "#TestPassword#"); //todo
+    private static final UserAccount user = new UserAccount("#USER#", "#TestPassword#"); //todo
     private static final Logger LOGGER = Logger.getLogger(Thread.currentThread().getName() + ":" + RSAClientKeys.class.getName());
     private static boolean needToRegister = false;
 
@@ -63,5 +62,9 @@ public class RSAClientKeys {
 
     public static Key getPrivateKey() {
         return userKeys.getPrivateKey();
+    }
+
+    public static String getPassword() {
+        return user.getPasswordHash();
     }
 }

@@ -31,14 +31,16 @@ public class ServerIO implements AutoCloseable {
         }
     }
 
-    private UserKey registerKey() throws ServerResponseException, WrongKeyException {
+    private UserKey registerKey() throws ServerResponseException {
         write("REGISTER NEW KEY");
         UserKey publicKey = RSAClientKeys.getPublicKey();
         List<String> message = List.of(publicKey.getKey()[0].toString(), publicKey.getKey()[1].toString(), RSA.encodeString(publicKey.getUser().getId(), serverKey));
         write(message);
         List<String> response = read();
-        if (response.getFirst().equals("KEY IS REJECTED")) {
-            throw new WrongKeyException("Key is rejected");
+        if (response.getFirst().startsWith("KEY IS REJECTED")) {
+            write("UPDATE KEY");
+            message = List.of(RSA.encodeString(publicKey.getUser().getId(), serverKey), RSA.encodeString(RSAClientKeys.getPassword(), serverKey));
+            write(message);
         }
         else if (response.getFirst().equals("META")) {
             response = read();
@@ -54,7 +56,7 @@ public class ServerIO implements AutoCloseable {
         return null;
     }
 
-    private void gerServerKey() throws WrongKeyException, ServerResponseException {
+    private void requestServerKey() throws WrongKeyException, ServerResponseException {
         write("GET RSA KEY");
         List<String> keyString = read();
         if (keyString.size() >= 5) {
@@ -66,7 +68,7 @@ public class ServerIO implements AutoCloseable {
                     new BigInteger(keyString.get(2)),
                     new BigInteger(keyString.get(3))
             });
-            if (!RSAKeys.isKey(serverKey)) {
+            if (serverKey.getUser().getId().equals("#SERVER#") && !RSAKeys.isKey(serverKey)) {
                 throw new WrongKeyException("Wrong server key");
             }
         } else {
@@ -77,7 +79,7 @@ public class ServerIO implements AutoCloseable {
 
     public void init() throws WrongKeyException, ServerResponseException {
         if (serverKey == null){
-            gerServerKey();
+            requestServerKey();
         }
         if (RSAClientKeys.isNeedToRegister()) {
             RSAClientKeys.register(registerKey());
@@ -90,7 +92,10 @@ public class ServerIO implements AutoCloseable {
         if (checkInitialization()) {
             initialized = true;
             LOGGER.info("YEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE");
-            close();//todo
+
+            //todo
+
+            close();
         }
         else {
             LOGGER.warning("Fail initialization");
