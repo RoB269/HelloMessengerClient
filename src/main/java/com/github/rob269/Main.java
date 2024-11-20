@@ -8,6 +8,8 @@ import com.github.rob269.rsa.WrongKeyException;
 import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
+import java.net.SocketException;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 public class Main {
@@ -27,6 +29,11 @@ public class Main {
         RSAClientKeys.initKeys();
         try (Socket clientSocket = new Socket("127.0.0.1", 5099);
              ServerIO serverIO = new ServerIO(clientSocket)){
+            try {
+                clientSocket.setSoTimeout((int) TimeUnit.SECONDS.toMillis(10));
+            } catch (SocketException e) {
+                LOGGER.warning("Time out exception");
+            }
             serverIO.init();
             if (!serverIO.isClosed()) LOGGER.info("YEEEEEEEEE");
         } catch (IOException e) {

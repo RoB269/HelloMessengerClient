@@ -31,16 +31,23 @@ public class ServerIO implements AutoCloseable {
         }
     }
 
+    boolean isTry = false;
     private UserKey registerKey() throws ServerResponseException {
         write("REGISTER NEW KEY");
         UserKey publicKey = RSAClientKeys.getPublicKey();
         List<String> message = List.of(publicKey.getKey()[0].toString(), publicKey.getKey()[1].toString(), RSA.encodeString(publicKey.getUser().getId(), serverKey));
         write(message);
         List<String> response = read();
-        if (response.getFirst().startsWith("KEY IS REJECTED")) {
-            write("UPDATE KEY");
-            message = List.of(RSA.encodeString(publicKey.getUser().getId(), serverKey), RSA.encodeString(RSAClientKeys.getPassword(), serverKey));
-            write(message);
+        if (response.getFirst().startsWith("KEY IS REJECTED") && !isTry) {
+            isTry = true;
+            write("RESET KEY");
+            String login = RSA.encodeString(publicKey.getUser().getId()+"\n"+RSAClientKeys.getPassword()+"\n", serverKey);
+            write(login);
+            String status = readFirst();
+            if (status.equals("OK"))
+                return registerKey();
+            else if (status.equals("AUTHENTICATION ERROR"))
+                close();
         }
         else if (response.getFirst().equals("META")) {
             response = read();
@@ -68,7 +75,7 @@ public class ServerIO implements AutoCloseable {
                     new BigInteger(keyString.get(2)),
                     new BigInteger(keyString.get(3))
             });
-            if (serverKey.getUser().getId().equals("#SERVER#") && !RSAKeys.isKey(serverKey)) {
+            if (!serverKey.getUser().getId().equals("#SERVER#") || !RSAKeys.isKey(serverKey)) {
                 throw new WrongKeyException("Wrong server key");
             }
         } else {
@@ -91,6 +98,14 @@ public class ServerIO implements AutoCloseable {
         write(key);
         if (checkInitialization()) {
             initialized = true;
+            String login = RSAClientKeys.getUserId()+"\n"+RSAClientKeys.getPassword()+"\n";
+            write(login);
+            String status = readFirst();
+            if (status.equals("AUTHENTICATION ERROR")) {
+                LOGGER.warning("AUTHENTICATION ERROR");
+                close();
+                return;
+            }
             LOGGER.info("YEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE");
 
             //todo
