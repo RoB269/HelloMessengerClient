@@ -1,5 +1,7 @@
 package com.github.rob269.io;
 
+import com.github.rob269.Main;
+import com.github.rob269.SimpleInterface;
 import com.github.rob269.User;
 import com.github.rob269.rsa.*;
 
@@ -35,7 +37,7 @@ public class ServerIO implements AutoCloseable {
     private UserKey registerKey() throws ServerResponseException {
         write("REGISTER NEW KEY");
         UserKey publicKey = RSAClientKeys.getPublicKey();
-        List<String> message = List.of(publicKey.getKey()[0].toString(), publicKey.getKey()[1].toString(), RSA.encodeString(publicKey.getUser().getId(), serverKey));
+        String[] message = new String[]{publicKey.getKey()[0].toString(), publicKey.getKey()[1].toString(), RSA.encodeString(publicKey.getUser().getId(), serverKey)};
         write(message);
         List<String> response = read();
         if (response.getFirst().startsWith("KEY IS REJECTED") && !isTry) {
@@ -46,8 +48,9 @@ public class ServerIO implements AutoCloseable {
             String status = readFirst();
             if (status.equals("OK"))
                 return registerKey();
-            else if (status.equals("AUTHENTICATION ERROR"))
+            else if (status.equals("AUTHENTICATION ERROR")) {
                 close();
+            }
         }
         else if (response.getFirst().equals("META")) {
             response = read();
@@ -93,8 +96,8 @@ public class ServerIO implements AutoCloseable {
         }
         write("KEY");
         UserKey clientKey = RSAClientKeys.getPublicKey();
-        List<String> key = new ArrayList<>(List.of(clientKey.getKey()[0].toString(), clientKey.getKey()[1].toString(),
-                clientKey.getMeta()[0].toString(), clientKey.getMeta()[1].toString(), RSA.encodeString(clientKey.getUser().getId(), serverKey)));
+        String[] key = new String[]{clientKey.getKey()[0].toString(), clientKey.getKey()[1].toString(),
+                clientKey.getMeta()[0].toString(), clientKey.getMeta()[1].toString(), RSA.encodeString(clientKey.getUser().getId(), serverKey)};
         write(key);
         if (checkInitialization()) {
             initialized = true;
@@ -103,14 +106,11 @@ public class ServerIO implements AutoCloseable {
             String status = readFirst();
             if (status.equals("AUTHENTICATION ERROR")) {
                 LOGGER.warning("AUTHENTICATION ERROR");
+                ResourcesIO.delete("RSA/userKeys" + ResourcesIO.EXTENSION);
                 close();
                 return;
             }
-            LOGGER.info("YEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE");
-
-            //todo
-
-            close();
+            LOGGER.info("Handshake complete");
         }
         else {
             LOGGER.warning("Fail initialization");
@@ -143,7 +143,7 @@ public class ServerIO implements AutoCloseable {
         return "";
     }
 
-    public List<String> read() throws ServerResponseException{
+    public synchronized List<String> read() throws ServerResponseException{
         List<String> lines = new ArrayList<>();
         try {
             String inputString = dis.readUTF();
@@ -163,7 +163,7 @@ public class ServerIO implements AutoCloseable {
         return lines;
     }
 
-    public void write(String message) {
+    public synchronized void write(String message) {
         if (message == null) {
             LOGGER.warning("Null message");
             return;
@@ -173,6 +173,7 @@ public class ServerIO implements AutoCloseable {
                 message = RSA.encodeString(message, serverKey);
             dos.writeUTF(message);
             dos.flush();
+            if (SimpleInterface.isKeepAlive()) Main.simpleInterface.updateTimer();
             LOGGER.finer("Message sent:\n" + message);
         } catch (IOException e) {
             LOGGER.warning("Can't send the message");
@@ -180,8 +181,8 @@ public class ServerIO implements AutoCloseable {
         }
     }
 
-    public void write(List<String> lines) {
-        if (lines == null || lines.isEmpty()) {
+    public synchronized void write(String[] lines) {
+        if (lines == null || lines.length == 0) {
             LOGGER.warning("Null message");
             return;
         }
@@ -194,6 +195,7 @@ public class ServerIO implements AutoCloseable {
             if (initialized) message = RSA.encodeString(message, serverKey);
             dos.writeUTF(message);
             dos.flush();
+            if (SimpleInterface.isKeepAlive()) Main.simpleInterface.updateTimer();
         } catch (IOException e) {
             LOGGER.warning("Can't send the message");
             e.printStackTrace();
@@ -201,7 +203,9 @@ public class ServerIO implements AutoCloseable {
     }
 
     public void close() {
+        if (initialized && !isClosed) write("EXIT");
         isClosed = true;
+        SimpleInterface.disableKeepAlive();
         try {
             dis.close();
             dos.close();

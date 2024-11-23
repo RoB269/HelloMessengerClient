@@ -64,6 +64,13 @@ public class ResourcesIO {
         write(filePath, lines, false);
     }
 
+    public synchronized static void delete(String filePath) {
+        File file = new File(ROOT_FOLDER+filePath);
+        if (file.exists()){
+            file.delete();
+        }
+    }
+
     public static boolean isExist(String filePath) {
         return new File(ROOT_FOLDER + filePath).exists();
     }

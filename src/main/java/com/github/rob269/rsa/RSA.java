@@ -10,7 +10,7 @@ import java.util.logging.Logger;
 public class RSA {
     private static final Logger LOGGER = Logger.getLogger(Thread.currentThread().getName() + ":" + RSA.class.getName());
 
-    private static final int DEFAULT_KEY_SIZE = 512;
+    private static final int DEFAULT_KEY_SIZE = 256;
     private static final int MAX_PACKAGE_SIZE = 32;
 
     public static String encode(BigInteger a, Key key) {

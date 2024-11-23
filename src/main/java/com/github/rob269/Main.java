@@ -20,6 +20,8 @@ public class Main {
         }
     }
     private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
+    public static ServerIO serverIO;
+    public static SimpleInterface simpleInterface;
 
     public static void main(String[] args) {
         serverConnect();
@@ -27,15 +29,19 @@ public class Main {
 
     public static void serverConnect() {
         RSAClientKeys.initKeys();
-        try (Socket clientSocket = new Socket("127.0.0.1", 5099);
-             ServerIO serverIO = new ServerIO(clientSocket)){
+        Socket clientSocket = null;
+        try {
+            clientSocket = new Socket("127.0.0.1", 5099);
+            serverIO = new ServerIO(clientSocket);
             try {
                 clientSocket.setSoTimeout((int) TimeUnit.SECONDS.toMillis(10));
             } catch (SocketException e) {
                 LOGGER.warning("Time out exception");
             }
             serverIO.init();
-            if (!serverIO.isClosed()) LOGGER.info("YEEEEEEEEE");
+            simpleInterface = new SimpleInterface(serverIO);
+            simpleInterface.keepAlive();
+            simpleInterface.uiPanel();
         } catch (IOException e) {
             LOGGER.warning("Can't connect to server");
             e.printStackTrace();
@@ -43,6 +49,17 @@ public class Main {
             e.printStackTrace();
         } catch (ServerResponseException e) {
             LOGGER.warning("Wrong server response");
+        }
+        finally {
+            if (clientSocket != null){
+                serverIO.close();
+                try {
+                    clientSocket.close();
+                } catch (IOException e) {
+                    LOGGER.warning("Client socket closing exception");
+                    e.printStackTrace();
+                }
+            }
         }
     }
 }
