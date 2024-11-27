@@ -26,7 +26,7 @@ public class KeepAliveThread extends Thread {
             if (System.currentTimeMillis() >= time && !serverIO.isClosed()) {
                 serverIO.write("KEEP ALIVE");
                 try {
-                    if (!serverIO.readFirst().equals("OK")) {
+                    if (!serverIO.readFirst().equals("OK KEEP ALIVE")) {
                         break;
                     }
                 } catch (ServerResponseException e) {

@@ -22,6 +22,11 @@ public class Message {
         this.message = message;
     }
 
+    @Override
+    public String toString() {
+        return "(" + date.getTime() + ")" + sender + "-->" + recipient + ":" + message;
+    }
+
     public String getRecipient() {
         return recipient;
     }
