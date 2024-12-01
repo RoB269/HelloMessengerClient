@@ -76,8 +76,13 @@ public class ResourcesIO {
     }
 
     public synchronized static void writeObject(Object object, String path) {
+        File file = new File(ROOT_FOLDER + path);
+        if (!file.getParentFile().exists()) {
+            file.getParentFile().mkdirs();
+        }
         try (FileOutputStream fos = new FileOutputStream(ROOT_FOLDER+path);
              ObjectOutputStream oos = new ObjectOutputStream(fos)){
+
             oos.writeObject(object);
         } catch (IOException e) {
             LOGGER.warning("Can't write object\n" + LogFormatter.formatStackTrace(e));
