@@ -158,7 +158,10 @@ public class ServerIO implements AutoCloseable {
         } catch (IOException e) {
             LOGGER.warning("Can't read lines\n" + LogFormatter.formatStackTrace(e));
         }
-        if (lines.isEmpty() || lines.getFirst().equals("500 ERROR")) throw new ServerResponseException("Server response error");
+        if (lines.isEmpty() || lines.getFirst().equals("500 ERROR")) {
+            close();
+            throw new ServerResponseException("Server response error");
+        }
         return lines;
     }
 

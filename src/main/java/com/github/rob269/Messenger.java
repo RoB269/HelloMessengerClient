@@ -18,6 +18,31 @@ public class Messenger {
         this.serverIO = serverIO;
     }
 
+    public List<Message> sortByDate(Map<String, List<Message>> messages) {
+        List<Message> messageList = new ArrayList<>();
+        String[] keys = messages.keySet().toArray(new String[0]);
+        for (String key : keys) {
+            messageList.addAll(messages.get(key));
+        }
+        return quickSort(messageList);
+    }
+
+    private List<Message> quickSort(List<Message> messages) {
+        long pivot = messages.getFirst().getDate().getTimeInMillis();
+        List<Message> moreThanPivot = new ArrayList<>();
+        List<Message> lessThanPivot = new ArrayList<>();
+        for (int i = 1; i < messages.size(); i++) {
+            if (messages.get(i).getDate().getTimeInMillis() >= pivot)
+                moreThanPivot.add(messages.get(i));
+            else
+                lessThanPivot.add(messages.get(i));
+        }
+        List<Message> result = (lessThanPivot.size() > 1 ? quickSort(lessThanPivot) : lessThanPivot);
+        result.add(messages.getFirst());
+        result.addAll(moreThanPivot.size()>1 ? quickSort(moreThanPivot) : moreThanPivot);
+        return result;
+    }
+
     public void sendMessage(Message message) {
         serverIO.write("SEND MESSAGE");
         String[] strMessage = new String[]{message.getRecipient(), message.getMessage()};

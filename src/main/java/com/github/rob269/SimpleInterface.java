@@ -15,6 +15,7 @@ public class SimpleInterface {
     private KeepAliveThread keepAliveThread;
     private final ServerIO serverIO;
     private static Map<String, List<Message>> messages = new HashMap<>();
+    private static Map<String, List<Message>> sentMessages = new HashMap<>();
     private final Messenger messenger;
 
     public SimpleInterface(ServerIO serverIO) {
@@ -24,7 +25,7 @@ public class SimpleInterface {
 
     public void updateMessages() {
         messages = messenger.getMessagesFromCache();
-        System.out.println("It's work!");
+        printMap(messages);
     }
 
     public void spamer() {
@@ -77,13 +78,7 @@ public class SimpleInterface {
     }
 
     private void printMap(Map<String, List<Message>> map) {
-        String[] senders = map.keySet().toArray(new String[0]);
-        for (String sender : senders) {
-            List<Message> m = map.get(sender);
-            for (Message message : m) {
-                System.out.println(message);
-            }
-        }
+        System.out.println(messenger.sortByDate(map));
     }
 
     public int ping() {

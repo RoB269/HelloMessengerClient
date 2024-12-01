@@ -82,7 +82,6 @@ public class ResourcesIO {
         }
         try (FileOutputStream fos = new FileOutputStream(ROOT_FOLDER+path);
              ObjectOutputStream oos = new ObjectOutputStream(fos)){
-
             oos.writeObject(object);
         } catch (IOException e) {
             LOGGER.warning("Can't write object\n" + LogFormatter.formatStackTrace(e));
