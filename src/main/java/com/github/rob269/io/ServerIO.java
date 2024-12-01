@@ -1,5 +1,6 @@
 package com.github.rob269.io;
 
+import com.github.rob269.LogFormatter;
 import com.github.rob269.Main;
 import com.github.rob269.SimpleInterface;
 import com.github.rob269.User;
@@ -28,8 +29,7 @@ public class ServerIO implements AutoCloseable {
             dis = new DataInputStream(clientSocket.getInputStream());
             LOGGER.fine("Output and Input streams is open");
         } catch (IOException e) {
-            LOGGER.warning("Can't open streams");
-            e.printStackTrace();
+            LOGGER.warning("Can't open streams\n" + LogFormatter.formatStackTrace(e));
         }
     }
 
@@ -156,8 +156,7 @@ public class ServerIO implements AutoCloseable {
                 stringBuilder.append(line).append("\n");
             LOGGER.finer("Get message: " + stringBuilder);
         } catch (IOException e) {
-            LOGGER.warning("Can't read lines");
-            e.printStackTrace();
+            LOGGER.warning("Can't read lines\n" + LogFormatter.formatStackTrace(e));
         }
         if (lines.isEmpty() || lines.getFirst().equals("500 ERROR")) throw new ServerResponseException("Server response error");
         return lines;
@@ -176,8 +175,7 @@ public class ServerIO implements AutoCloseable {
             if (SimpleInterface.isKeepAlive()) Main.simpleInterface.updateTimer();
             LOGGER.finer("Message sent:\n" + message);
         } catch (IOException e) {
-            LOGGER.warning("Can't send the message");
-            e.printStackTrace();
+            LOGGER.warning("Can't send the message\n" + LogFormatter.formatStackTrace(e));
         }
     }
 
@@ -197,8 +195,7 @@ public class ServerIO implements AutoCloseable {
             dos.flush();
             if (SimpleInterface.isKeepAlive()) Main.simpleInterface.updateTimer();
         } catch (IOException e) {
-            LOGGER.warning("Can't send the message");
-            e.printStackTrace();
+            LOGGER.warning("Can't send the message\n" + LogFormatter.formatStackTrace(e));
         }
     }
 
@@ -210,8 +207,7 @@ public class ServerIO implements AutoCloseable {
             dis.close();
             dos.close();
         } catch (IOException e) {
-            LOGGER.warning("Can't close streams");
-            e.printStackTrace();
+            LOGGER.warning("Can't close streams\n" + LogFormatter.formatStackTrace(e));
         }
     }
 }

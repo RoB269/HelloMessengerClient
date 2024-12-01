@@ -1,6 +1,5 @@
 package com.github.rob269;
 
-import com.github.rob269.SimpleInterface;
 import com.github.rob269.io.ServerIO;
 import com.github.rob269.io.ServerResponseException;
 
@@ -8,15 +7,17 @@ import java.util.logging.Logger;
 
 public class KeepAliveThread extends Thread {
     private static final Logger LOGGER = Logger.getLogger(KeepAliveThread.class.getName());
-    private long time;
+    protected int timeRange;
+    protected long time;
 
-    private ServerIO serverIO;
-    public KeepAliveThread(ServerIO serverIO) {
+    protected ServerIO serverIO;
+    public KeepAliveThread(ServerIO serverIO, int timeRange) {
         this.serverIO = serverIO;
+        this.timeRange = timeRange;
     }
 
     public void updateTimer() {
-        time = System.currentTimeMillis() + 5000;
+        time = System.currentTimeMillis() + timeRange;
     }
 
     @Override
@@ -30,10 +31,11 @@ public class KeepAliveThread extends Thread {
                         break;
                     }
                 } catch (ServerResponseException e) {
-                    LOGGER.warning("Server response exception");
-                    e.printStackTrace();
+                    LOGGER.warning("Server response exception\n" + LogFormatter.formatStackTrace(e));
                     break;
                 }
+            } else if (serverIO.isClosed()) {
+                break;
             }
         }
     }

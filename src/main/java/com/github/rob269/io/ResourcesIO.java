@@ -1,5 +1,6 @@
 package com.github.rob269.io;
 
+import com.github.rob269.LogFormatter;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -44,8 +45,7 @@ public class ResourcesIO {
             try {
                 file.createNewFile();
             } catch (IOException e) {
-                LOGGER.warning("Can't create new file (" + filePath + ") ");
-                e.printStackTrace();
+                LOGGER.warning("Can't create new file (" + filePath + ")\n" + LogFormatter.formatStackTrace(e));
             }
         }
         try {
@@ -73,6 +73,29 @@ public class ResourcesIO {
 
     public static boolean isExist(String filePath) {
         return new File(ROOT_FOLDER + filePath).exists();
+    }
+
+    public synchronized static void writeObject(Object object, String path) {
+        try (FileOutputStream fos = new FileOutputStream(ROOT_FOLDER+path);
+             ObjectOutputStream oos = new ObjectOutputStream(fos)){
+            oos.writeObject(object);
+        } catch (IOException e) {
+            LOGGER.warning("Can't write object\n" + LogFormatter.formatStackTrace(e));
+        }
+    }
+
+    public static Object readObject(String path) {
+        if (new File(ROOT_FOLDER+path).exists()) {
+            try (FileInputStream fis = new FileInputStream(ROOT_FOLDER + path);
+                 ObjectInputStream ois = new ObjectInputStream(fis)) {
+                return ois.readObject();
+            } catch (IOException e) {
+                LOGGER.warning("Object read exception\n" + LogFormatter.formatStackTrace(e));
+            } catch (ClassNotFoundException e) {
+                LOGGER.warning("Class not found\n" + LogFormatter.formatStackTrace(e));
+            }
+        }
+        return null;
     }
 
     public synchronized static void writeJSON(String filePath, Object object) {

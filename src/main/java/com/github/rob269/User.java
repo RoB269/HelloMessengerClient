@@ -1,7 +1,5 @@
 package com.github.rob269;
 
-import com.google.common.hash.Hashing;
-
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 

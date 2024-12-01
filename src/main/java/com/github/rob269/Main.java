@@ -40,15 +40,14 @@ public class Main {
             }
             serverIO.init();
             simpleInterface = new SimpleInterface(serverIO);
-            simpleInterface.keepAlive();
+            simpleInterface.checking();
             simpleInterface.uiPanel();
         } catch (IOException e) {
-            LOGGER.warning("Can't connect to server");
-            e.printStackTrace();
+            LOGGER.warning("Can't connect to server\n" + LogFormatter.formatStackTrace(e));
         } catch (WrongKeyException e) {
-            e.printStackTrace();
+            LOGGER.warning(LogFormatter.formatStackTrace(e));
         } catch (ServerResponseException e) {
-            LOGGER.warning("Wrong server response");
+            LOGGER.warning("Wrong server response\n" + LogFormatter.formatStackTrace(e));
         }
         finally {
             if (clientSocket != null){
@@ -56,8 +55,7 @@ public class Main {
                 try {
                     clientSocket.close();
                 } catch (IOException e) {
-                    LOGGER.warning("Client socket closing exception");
-                    e.printStackTrace();
+                    LOGGER.warning("Client socket closing exception\n" + LogFormatter.formatStackTrace(e));
                 }
             }
         }

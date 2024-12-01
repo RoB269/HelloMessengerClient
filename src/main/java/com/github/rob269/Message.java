@@ -1,9 +1,10 @@
 package com.github.rob269;
 
+import java.io.Serializable;
 import java.util.Calendar;
 import java.util.Date;
 
-public class Message {
+public class Message implements Serializable {
     private String recipient;
     private String sender;
     private String message;

@@ -8,7 +8,7 @@ import java.util.Random;
 import java.util.logging.Logger;
 
 public class RSA {
-    private static final Logger LOGGER = Logger.getLogger(Thread.currentThread().getName() + ":" + RSA.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(RSA.class.getName());
 
     private static final int DEFAULT_KEY_SIZE = 512;
     private static final int MAX_PACKAGE_SIZE = 64;

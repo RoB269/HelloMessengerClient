@@ -11,6 +11,6 @@ import java.util.GregorianCalendar;
 
 public class Test {
     public static void main(String[] args) {
-        System.out.println("\\'");
+        System.out.println(Hashing.sha256().hashString("#Rob269Password#", StandardCharsets.UTF_8));
     }
 }

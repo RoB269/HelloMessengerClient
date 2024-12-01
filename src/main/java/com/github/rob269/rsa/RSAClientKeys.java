@@ -10,7 +10,7 @@ public class RSAClientKeys {
     private static RSAKeys userKeys;
     private static final UserAccount user = new UserAccount("Rob269", "#Rob269Password#"); //todo
 //    private static final UserAccount user = new UserAccount("#TEST_USER#", "#TestPassword#"); //todo
-    private static final Logger LOGGER = Logger.getLogger(Thread.currentThread().getName() + ":" + RSAClientKeys.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(RSAClientKeys.class.getName());
     private static boolean needToRegister = false;
 
     public static void initKeys() {
@@ -66,7 +66,7 @@ public class RSAClientKeys {
     }
 
     public static String getPassword() {
-        return user.getPasswordHash();
+        return user.getPassword();
     }
 
     public static String getUserId() {
