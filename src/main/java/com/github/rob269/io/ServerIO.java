@@ -117,7 +117,11 @@ public class ServerIO implements AutoCloseable {
     }
 
     private boolean checkInitialization() throws ServerResponseException{
-        if (RSA.decodeString(readFirst(), RSAClientKeys.getPrivateKey()).equals("INITIALIZED")) {
+        String response = readFirst();
+        if (response.equals("Wrong key")) {
+            ResourcesIO.delete("RSA/userKeys.json");
+        }
+        if (RSA.decodeString(response, RSAClientKeys.getPrivateKey()).equals("INITIALIZED")) {
             write(RSA.encodeString("INITIALIZED", serverKey));
             return RSA.decodeString(readFirst(), RSAClientKeys.getPrivateKey()).equals("OK");
         }
