@@ -7,9 +7,9 @@ import java.math.BigInteger;
 import java.util.logging.Logger;
 
 public class RSAClientKeys {
+    private static boolean isLogin = false;
     private static RSAKeys userKeys;
-    private static final UserAccount user = new UserAccount("Rob269", "#Rob269Password#"); //todo
-//    private static final UserAccount user = new UserAccount("#TEST_USER#", "#TestPassword#"); //todo
+    private static UserAccount user = null;
     private static final Logger LOGGER = Logger.getLogger(RSAClientKeys.class.getName());
     private static boolean needToRegister = false;
 
@@ -31,6 +31,15 @@ public class RSAClientKeys {
             generateNewKeys();
         }
         LOGGER.fine("The keys have been initialized");
+    }
+
+    public static void login(String username, String password) {
+        user = new UserAccount(username, password);
+        isLogin = true;
+    }
+
+    public static boolean isLogin() {
+        return isLogin;
     }
 
     public static void register(UserKey key) throws WrongKeyException{

@@ -1,9 +1,6 @@
 package com.github.rob269.io;
 
-import com.github.rob269.LogFormatter;
-import com.github.rob269.Main;
-import com.github.rob269.SimpleInterface;
-import com.github.rob269.User;
+import com.github.rob269.*;
 import com.github.rob269.rsa.*;
 
 import java.io.DataInputStream;
@@ -170,15 +167,20 @@ public class ServerIO implements AutoCloseable {
             LOGGER.warning("Null message");
             return;
         }
-        try {
-            if (initialized)
-                message = RSA.encodeString(message, serverKey);
-            dos.writeUTF(message);
-            dos.flush();
-            if (SimpleInterface.isKeepAlive()) Main.simpleInterface.updateTimer();
-            LOGGER.finer("Message sent:\n" + message);
-        } catch (IOException e) {
-            LOGGER.warning("Can't send the message\n" + LogFormatter.formatStackTrace(e));
+        if (!isClosed){
+            try {
+                if (initialized)
+                    message = RSA.encodeString(message, serverKey);
+                dos.writeUTF(message);
+                dos.flush();
+                if (SimpleInterface.isKeepAlive() || Messenger.getChecking()) Main.simpleInterface.updateTimer();
+                LOGGER.finer("Message sent:\n" + message);
+            } catch (IOException e) {
+                LOGGER.warning("Can't send the message\n" + LogFormatter.formatStackTrace(e));
+            }
+        }
+        else {
+            close();
         }
     }
 
@@ -196,7 +198,7 @@ public class ServerIO implements AutoCloseable {
             if (initialized) message = RSA.encodeString(message, serverKey);
             dos.writeUTF(message);
             dos.flush();
-            if (SimpleInterface.isKeepAlive()) Main.simpleInterface.updateTimer();
+            if (SimpleInterface.isKeepAlive() || Messenger.getChecking()) Main.simpleInterface.updateTimer();
         } catch (IOException e) {
             LOGGER.warning("Can't send the message\n" + LogFormatter.formatStackTrace(e));
         }

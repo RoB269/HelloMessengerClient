@@ -10,6 +10,7 @@ import java.util.*;
 import java.util.logging.Logger;
 
 public class SimpleInterface {
+    public static String lang = "EN";
     private static final Logger LOGGER = Logger.getLogger(SimpleInterface.class.getName());
     private static volatile boolean keepAlive = false;
     private KeepAliveThread keepAliveThread;
@@ -39,6 +40,10 @@ public class SimpleInterface {
         messenger.checkingMessages(!Messenger.getChecking());
     }
 
+    public boolean isChecking() {
+        return Messenger.getChecking();
+    }
+
     public void keepAlive() {
         if (!keepAlive){
             keepAlive = true;
@@ -49,8 +54,23 @@ public class SimpleInterface {
 
     public void uiPanel() {
         while (!serverIO.isClosed()){
-            System.out.println("\nUser:" + RSAClientKeys.getUserId());
-            System.out.println("1. Get messages\n2. Send message\n3. Exit\n4. Ping\n5. Get sent messages");
+            System.out.println((lang.equals("RU") ? "\nПользователь:" : "\nUser:") + RSAClientKeys.getUserId());
+            System.out.println(lang.equals("RU") ? """
+                    1. Получить новые сообщения
+                    2. Получить все сообщения
+                    3. Отправить сообщение
+                    4. Выйти
+                    5. Пинг
+                    6. Получить отправленные сообщения
+                    7. Отправить файл на сервер""" :
+                    """
+                    1. Get new messages
+                    2. Get all messages
+                    3. Send message
+                    4. Exit
+                    5. Ping
+                    6. Get sent messages
+                    7. Send file to server""");
             Scanner scanner = new Scanner(System.in);
             String input = scanner.nextLine();
             switch (input) {
@@ -59,26 +79,39 @@ public class SimpleInterface {
                     printMap(messages);
                 }
                 case "2" -> {
+                    Map<String, List<Message>> messages = messenger.getMessagesFromCache();
+                    printMap(messages);
+                }
+                case "3" -> {
                     String recipient = scanner.nextLine();
                     String message = scanner.nextLine();
                     System.out.println(recipient);
                     System.out.println(message);
                     messenger.sendMessage(new Message(recipient, RSAClientKeys.getUserId(), message));
                 }
-                case "3" -> serverIO.close();
-                case "4" -> System.out.println(ping()+"ms");
-                case "5" -> {
+                case "4" -> serverIO.close();
+                case "5" -> System.out.println(ping()+"ms");
+                case "6" -> {
                     long start = System.currentTimeMillis();
                     Map<String, List<Message>> messages = messenger.getSentMessages();
                     printMap(messages);
                     System.out.println((System.currentTimeMillis()-start) + "ms");
+                }
+                case "7" -> {
+                    messenger.sendTxtFile(new File("file.txt"));
                 }
             }
         }
     }
 
     private void printMap(Map<String, List<Message>> map) {
-        System.out.println(messenger.sortByDate(map));
+        List<Message> messageList = messenger.sortByDate(map);
+        for (Message message : messageList) {
+            System.out.println(message);
+        }
+        if (messageList.isEmpty()) {
+            System.out.println(lang.equals("RU") ? "Сообщений нет" : "No messages");
+        }
     }
 
     public int ping() {
@@ -95,7 +128,8 @@ public class SimpleInterface {
 
 
     public void updateTimer() {
-        keepAliveThread.updateTimer();
+        if (keepAlive) keepAliveThread.updateTimer();
+        if (isChecking()) messenger.updateCheckingTimer();
     }
 
     public static boolean isKeepAlive() {

@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -24,10 +25,34 @@ public class Main {
     public static SimpleInterface simpleInterface;
 
     public static void main(String[] args) {
+        for (int i = 0; i < args.length; i++) {
+            if (args[i].equals("-login")) {
+                if (i+2<args.length) {
+                    RSAClientKeys.login(args[i + 1], args[i + 2]);
+                    i += 2;
+                }
+                else {
+                    LOGGER.warning("Login exception");
+                }
+            }
+            else if (args[i].equals("-lang")) {
+                if (i+1< args.length) {
+                    SimpleInterface.lang = args[i+1];
+                }
+            }
+        }
         serverConnect();
     }
 
     public static void serverConnect() {
+        if (!RSAClientKeys.isLogin()) {
+            Scanner scanner = new Scanner(System.in);
+            System.out.print(SimpleInterface.lang.equals("RU") ? "Имя пользователя: " : "Username: ");
+            String username = scanner.nextLine();
+            System.out.print(SimpleInterface.lang.equals("RU") ? "Пароль: " : "Password: ");
+            String password = scanner.nextLine();
+            RSAClientKeys.login(username, password);
+        }
         RSAClientKeys.initKeys();
         Socket clientSocket = null;
         try {

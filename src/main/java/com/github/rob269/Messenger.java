@@ -18,6 +18,10 @@ public class Messenger {
         this.serverIO = serverIO;
     }
 
+    public void updateCheckingTimer() {
+        checkingThread.updateTimer();
+    }
+
     public List<Message> sortByDate(Map<String, List<Message>> messages) {
         List<Message> messageList = new ArrayList<>();
         String[] keys = messages.keySet().toArray(new String[0]);
@@ -28,19 +32,22 @@ public class Messenger {
     }
 
     private List<Message> quickSort(List<Message> messages) {
-        long pivot = messages.getFirst().getDate().getTimeInMillis();
-        List<Message> moreThanPivot = new ArrayList<>();
-        List<Message> lessThanPivot = new ArrayList<>();
-        for (int i = 1; i < messages.size(); i++) {
-            if (messages.get(i).getDate().getTimeInMillis() >= pivot)
-                moreThanPivot.add(messages.get(i));
-            else
-                lessThanPivot.add(messages.get(i));
+        if (!messages.isEmpty()){
+            long pivot = messages.getFirst().getDate().getTimeInMillis();
+            List<Message> moreThanPivot = new ArrayList<>();
+            List<Message> lessThanPivot = new ArrayList<>();
+            for (int i = 1; i < messages.size(); i++) {
+                if (messages.get(i).getDate().getTimeInMillis() >= pivot)
+                    moreThanPivot.add(messages.get(i));
+                else
+                    lessThanPivot.add(messages.get(i));
+            }
+            List<Message> result = (lessThanPivot.size() > 1 ? quickSort(lessThanPivot) : lessThanPivot);
+            result.add(messages.getFirst());
+            result.addAll(moreThanPivot.size() > 1 ? quickSort(moreThanPivot) : moreThanPivot);
+            return result;
         }
-        List<Message> result = (lessThanPivot.size() > 1 ? quickSort(lessThanPivot) : lessThanPivot);
-        result.add(messages.getFirst());
-        result.addAll(moreThanPivot.size()>1 ? quickSort(moreThanPivot) : moreThanPivot);
-        return result;
+        return new ArrayList<>();
     }
 
     public void sendMessage(Message message) {
@@ -63,14 +70,14 @@ public class Messenger {
 
     public void checkingMessages(boolean checking) {
         if (!Messenger.checking && checking) {//Вкл
-            Messenger.checking = checking;
+            Messenger.checking = true;
             if (SimpleInterface.isKeepAlive())
                 SimpleInterface.disableKeepAlive();
             checkingThread = new CheckingThread(serverIO, 1000);
             checkingThread.start();
         }
         else if (Messenger.checking && !checking){//Выкл
-            Messenger.checking = checking;
+            Messenger.checking = false;
             if (!checkingThread.isInterrupted()) {
                 checkingThread.interrupt();
             }
@@ -224,17 +231,21 @@ public class Messenger {
 
     public void sendTxtFile(File file) {
         if (file.exists()) {
+            long start = System.currentTimeMillis();
             try {
                 serverIO.write("SEND FILE");
                 BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
                 String line;
+                StringBuilder stringBuilder = new StringBuilder();
                 while ((line=bufferedReader.readLine()) != null) {
-                    serverIO.write(line);
+                    stringBuilder.append(line).append("\n");
                 }
+                serverIO.write(stringBuilder.toString());
                 serverIO.write("#END");
             } catch (IOException e) {
                 LOGGER.warning("File writing exception\n" + LogFormatter.formatStackTrace(e));
             }
+            System.out.println((System.currentTimeMillis()-start) + "ms");
         }
     }
 }
