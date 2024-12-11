@@ -20,6 +20,7 @@ public class Main {
             logsDir.mkdir();
         }
     }
+    private static String ip = "127.0.0.1";
     private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
     public static ServerIO serverIO;
     public static SimpleInterface simpleInterface;
@@ -40,6 +41,11 @@ public class Main {
                     SimpleInterface.lang = args[i+1];
                 }
             }
+            else if (args[i].equals("-ip")) {
+                if (i+1 < args.length) {
+                    ip = args[i+1];
+                }
+            }
         }
         serverConnect();
     }
@@ -56,7 +62,7 @@ public class Main {
         RSAClientKeys.initKeys();
         Socket clientSocket = null;
         try {
-            clientSocket = new Socket("127.0.0.1", 5099);
+            clientSocket = new Socket(ip, 5099);
             serverIO = new ServerIO(clientSocket);
             try {
                 clientSocket.setSoTimeout((int) TimeUnit.SECONDS.toMillis(10));
