@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.net.Socket;
 import java.util.*;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class ServerIO implements AutoCloseable {
@@ -148,6 +149,7 @@ public class ServerIO implements AutoCloseable {
         List<String> lines = new ArrayList<>();
         try {
             String inputString = dis.readUTF();
+            String original = inputString;
             if (initialized) {
                 inputString = RSA.decodeString(inputString, RSAClientKeys.getPrivateKey());
             }
@@ -155,7 +157,8 @@ public class ServerIO implements AutoCloseable {
             StringBuilder stringBuilder = new StringBuilder();
             for (String line : lines)
                 stringBuilder.append(line).append("\n");
-            LOGGER.finer("Get message: " + stringBuilder);
+            if (!stringBuilder.toString().startsWith("CHECK"))
+                LOGGER.info((initialized ? "Get message:\n" + original+"\nDecoded:" +inputString : "Message sent:\n" + inputString));//todo FINER
         } catch (IOException e) {
             LOGGER.warning("Can't read lines\n" + LogFormatter.formatStackTrace(e));
         }
@@ -167,10 +170,15 @@ public class ServerIO implements AutoCloseable {
     }
 
     public synchronized void write(String message) {
+        write(message, Level.INFO); //todo FINER
+    }
+
+    public synchronized void write(String message, Level level) {
         if (message == null) {
             LOGGER.warning("Null message");
             return;
         }
+        String original = message;
         if (!isClosed){
             try {
                 if (initialized)
@@ -178,7 +186,7 @@ public class ServerIO implements AutoCloseable {
                 dos.writeUTF(message);
                 dos.flush();
                 if (SimpleInterface.isKeepAlive() || Messenger.getChecking()) Main.simpleInterface.updateTimer();
-                LOGGER.finer("Message sent:\n" + message);
+                LOGGER.log(level, (initialized ? "Message sent:\n" + original+"\nEncoded:" + message : "Message sent:\n" + message));
             } catch (IOException e) {
                 LOGGER.warning("Can't send the message\n" + LogFormatter.formatStackTrace(e));
             }
@@ -189,6 +197,10 @@ public class ServerIO implements AutoCloseable {
     }
 
     public synchronized void write(String[] lines) {
+        write(lines, Level.INFO);//todo FINER
+    }
+
+    public synchronized void write(String[] lines, Level level) {
         if (lines == null || lines.length == 0) {
             LOGGER.warning("Null message");
             return;
@@ -197,11 +209,12 @@ public class ServerIO implements AutoCloseable {
         for (String line : lines)
             stringBuilder.append(line).append("\n");
         String message = stringBuilder.toString();
-        LOGGER.finer("Sending message:\n" + message);
+        String original = message;
         try {
             if (initialized) message = RSA.encodeString(message, serverKey);
             dos.writeUTF(message);
             dos.flush();
+            LOGGER.log(level, (initialized ? "Message sent:\n" + original+"\nEncoded:" +message : "Message sent:\n" + message));
             if (SimpleInterface.isKeepAlive() || Messenger.getChecking()) Main.simpleInterface.updateTimer();
         } catch (IOException e) {
             LOGGER.warning("Can't send the message\n" + LogFormatter.formatStackTrace(e));

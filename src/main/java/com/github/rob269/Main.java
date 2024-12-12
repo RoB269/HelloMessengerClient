@@ -21,6 +21,7 @@ public class Main {
         }
     }
     private static String ip = "127.0.0.1";
+    private static boolean mini = false;
     private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
     public static ServerIO serverIO;
     public static SimpleInterface simpleInterface;
@@ -45,9 +46,15 @@ public class Main {
                 if (i+1 < args.length) {
                     ip = args[i+1];
                 }
+            } else if (args[i].equals("-mini")) {
+                mini = true;
             }
         }
         serverConnect();
+    }
+
+    public static boolean isMini() {
+        return mini;
     }
 
     public static void serverConnect() {

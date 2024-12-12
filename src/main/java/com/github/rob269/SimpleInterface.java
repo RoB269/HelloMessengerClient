@@ -55,50 +55,78 @@ public class SimpleInterface {
     public void uiPanel() {
         while (!serverIO.isClosed()){
             System.out.println((lang.equals("RU") ? "\nПользователь:" : "\nUser:") + RSAClientKeys.getUserId());
-            System.out.println(lang.equals("RU") ? """
-                    1. Получить новые сообщения
-                    2. Получить все сообщения
-                    3. Отправить сообщение
-                    4. Выйти
-                    5. Пинг
-                    6. Получить отправленные сообщения
-                    7. Отправить файл на сервер""" :
-                    """
-                    1. Get new messages
-                    2. Get all messages
-                    3. Send message
-                    4. Exit
-                    5. Ping
-                    6. Get sent messages
-                    7. Send file to server""");
-            Scanner scanner = new Scanner(System.in);
-            String input = scanner.nextLine();
-            switch (input) {
-                case "1" -> {
-                    Map<String, List<Message>> messages = messenger.getNewMessages();
-                    printMap(messages);
+            if (!Main.isMini()){
+                System.out.println(lang.equals("RU") ? """
+                        1. Получить новые сообщения
+                        2. Получить все сообщения
+                        3. Отправить сообщение
+                        4. Выйти
+                        5. Пинг
+                        6. Получить отправленные сообщения
+                        7. Отправить файл на сервер""" :
+                        """
+                                1. Get new messages
+                                2. Get all messages
+                                3. Send message
+                                4. Exit
+                                5. Ping
+                                6. Get sent messages
+                                7. Send file to server""");
+                Scanner scanner = new Scanner(System.in);
+                String input = scanner.nextLine();
+                switch (input) {
+                    case "1" -> {
+                        Map<String, List<Message>> messages = messenger.getNewMessages();
+                        printMap(messages);
+                    }
+                    case "2" -> {
+                        Map<String, List<Message>> messages = messenger.getMessagesFromCache();
+                        printMap(messages);
+                    }
+                    case "3" -> {
+                        String recipient = scanner.nextLine();
+                        String message = scanner.nextLine();
+                        System.out.println(recipient);
+                        System.out.println(message);
+                        messenger.sendMessage(new Message(recipient, RSAClientKeys.getUserId(), message));
+                    }
+                    case "4" -> serverIO.close();
+                    case "5" -> System.out.println(ping() + "ms");
+                    case "6" -> {
+                        long start = System.currentTimeMillis();
+                        Map<String, List<Message>> messages = messenger.getSentMessages();
+                        printMap(messages);
+                        System.out.println((System.currentTimeMillis() - start) + "ms");
+                    }
+                    case "7" -> {
+                        messenger.sendTxtFile(new File("file.txt"));
+                    }
                 }
-                case "2" -> {
-                    Map<String, List<Message>> messages = messenger.getMessagesFromCache();
-                    printMap(messages);
-                }
-                case "3" -> {
-                    String recipient = scanner.nextLine();
-                    String message = scanner.nextLine();
-                    System.out.println(recipient);
-                    System.out.println(message);
-                    messenger.sendMessage(new Message(recipient, RSAClientKeys.getUserId(), message));
-                }
-                case "4" -> serverIO.close();
-                case "5" -> System.out.println(ping()+"ms");
-                case "6" -> {
-                    long start = System.currentTimeMillis();
-                    Map<String, List<Message>> messages = messenger.getSentMessages();
-                    printMap(messages);
-                    System.out.println((System.currentTimeMillis()-start) + "ms");
-                }
-                case "7" -> {
-                    messenger.sendTxtFile(new File("file.txt"));
+            }
+            else {
+                System.out.println(lang.equals("RU") ? """
+                        1. Отправить сообщение
+                        2. Получить сообщения
+                        3. Выйти""" :
+                        """
+                                1. Send message
+                                2. Get messages
+                                3. Exit""");
+                Scanner scanner = new Scanner(System.in);
+                String input = scanner.nextLine();
+                switch (input) {
+                    case "1"  -> {
+                        String recipient = scanner.nextLine();
+                        String message = scanner.nextLine();
+                        System.out.println(recipient);
+                        System.out.println(message);
+                        messenger.sendMessage(new Message(recipient, RSAClientKeys.getUserId(), message));
+                    }
+                    case "2" -> {
+                        Map<String, List<Message>> messages = messenger.getMessagesFromCache();
+                        printMap(messages);
+                    }
+                    case "3"  -> serverIO.close();
                 }
             }
         }

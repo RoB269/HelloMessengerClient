@@ -4,6 +4,7 @@ import com.github.rob269.io.ServerIO;
 import com.github.rob269.io.ServerResponseException;
 
 import java.util.Map;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class CheckingThread extends KeepAliveThread {
@@ -18,7 +19,7 @@ public class CheckingThread extends KeepAliveThread {
         while (Messenger.getChecking() && !isInterrupted()) {
             if (System.currentTimeMillis() >= time && !serverIO.isClosed()) {
                 updateTimer();
-                serverIO.write("CHECK");
+                serverIO.write("CHECK", Level.ALL);
                 try {
                     if (serverIO.readFirst().equals("CHECK YES")) {
                         Main.simpleInterface.updateMessages();
