@@ -26,6 +26,7 @@ public class SimpleInterface {
 
     public void updateMessages() {
         messages = messenger.getMessagesFromCache();
+        System.out.println(1);
         printMap(messages);
     }
 
@@ -134,11 +135,13 @@ public class SimpleInterface {
 
     private void printMap(Map<String, List<Message>> map) {
         List<Message> messageList = messenger.sortByDate(map);
-        for (Message message : messageList) {
-            System.out.println(message);
-        }
         if (messageList.isEmpty()) {
             System.out.println(lang.equals("RU") ? "Сообщений нет" : "No messages");
+        }
+        else {
+            for (Message message : messageList) {
+                System.out.println(message);
+            }
         }
     }
 
