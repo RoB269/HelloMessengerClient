@@ -8,7 +8,7 @@ import java.util.logging.Logger;
 
 public class RSAClientKeys {
     private static boolean isLogin = false;
-    private static RSAKeys userKeys;
+    private static RSAKeysPair userKeys;
     private static UserAccount user = null;
     private static final Logger LOGGER = Logger.getLogger(RSAClientKeys.class.getName());
     private static boolean needToRegister = false;
@@ -16,7 +16,7 @@ public class RSAClientKeys {
     public static void initKeys() {
         if (ResourcesIO.isExist("RSA/userKeys.json")) {
             try {
-                RSAKeys userKeys = ResourcesIO.readJSON("RSA/userKeys.json", RSAKeys.class);
+                RSAKeysPair userKeys = ResourcesIO.readJSON("RSA/userKeys.json", RSAKeysPair.class);
                 if (userKeys == null || userKeys.getUser() == null) {
                     throw new NullPointerException();
                 }
@@ -62,7 +62,7 @@ public class RSAClientKeys {
     private static void generateNewKeys() {
         BigInteger[][] keys = RSA.generateKeys();
         needToRegister = true;
-        RSAClientKeys.userKeys = new RSAKeys(keys, user);
+        RSAClientKeys.userKeys = new RSAKeysPair(keys, user);
         LOGGER.fine("The keys were generated");
     }
 

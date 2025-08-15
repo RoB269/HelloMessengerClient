@@ -3,28 +3,35 @@ package com.github.rob269.io;
 import com.github.rob269.*;
 import com.github.rob269.rsa.*;
 
+import java.io.Closeable;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.net.Socket;
-import java.util.*;
+import java.net.SocketException;
+import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class ServerIO implements AutoCloseable {
+public class ServerIO implements Closeable {
+    private Socket serverSocket;
     private DataOutputStream dos;
     private DataInputStream dis;
     private static UserKey serverKey;
     private boolean isClosed = false;
     private boolean initialized = false;
+    private InputRouter router;
 
     private static final Logger LOGGER = Logger.getLogger(Thread.currentThread().getName() + ":" + ServerIO.class.getName());
 
-    public ServerIO(Socket clientSocket) {
+    public ServerIO(Socket serverSocket) {
         try {
-            dos = new DataOutputStream(clientSocket.getOutputStream());
-            dis = new DataInputStream(clientSocket.getInputStream());
+            this.serverSocket = serverSocket;
+            dos = new DataOutputStream(serverSocket.getOutputStream());
+            dis = new DataInputStream(serverSocket.getInputStream());
+            router = new InputRouter(dis, this);
+            router.start();
             LOGGER.fine("Output and Input streams is open");
         } catch (IOException e) {
             LOGGER.warning("Can't open streams\n" + LogFormatter.formatStackTrace(e));
@@ -32,77 +39,80 @@ public class ServerIO implements AutoCloseable {
     }
 
     boolean isTry = false;
-    private UserKey registerKey() throws ServerResponseException {
-        write("REGISTER NEW KEY");
+    private UserKey registerKeyRequest() {
+        writeCommand(21);
         UserKey publicKey = RSAClientKeys.getPublicKey();
-        String[] message = new String[]{publicKey.getKey()[0].toString(), publicKey.getKey()[1].toString(), RSA.encodeString(publicKey.getUser().getId(), serverKey)};
-        write(message);
-        List<String> response = read();
-        if (response.getFirst().startsWith("KEY IS REJECTED") && !isTry) {
+        writePackageCount(3);
+        for (int i = 0; i < 2; i++) write(publicKey.getKey()[i]);
+        write(RSA.encodeStringToByte(publicKey.getUser().getId(), serverKey));
+        byte response = readCommand();
+        if (response == 61 && !isTry) {
             isTry = true;
-            write("RESET KEY");
-            String login = RSA.encodeString(publicKey.getUser().getId()+"\n"+RSAClientKeys.getPassword()+"\n", serverKey);
-            write(login);
-            String status = readFirst();
-            if (status.equals("OK"))
-                return registerKey();
-            else if (status.equals("AUTHENTICATION ERROR")) {
-                close();
+            writeCommand(22);
+            writePackageCount(2);
+            write(RSA.encodeStringToByte(publicKey.getUser().getId(), serverKey));
+            write(RSA.encodeStringToByte(RSAClientKeys.getPassword(), serverKey));
+            byte status = readCommand();
+            if (status == 50)
+                return registerKeyRequest();
+            else if (status == 62) {
+                close();//todo
             }
         }
-        else if (response.getFirst().equals("META")) {
-            response = read();
-            if (response.size() == 2) {
-                UserKey key = RSAClientKeys.getPublicKey();
-                key.setMeta(new BigInteger[]{new BigInteger(response.getFirst()), new BigInteger(response.get(1))});
-                return key;
-            }
-            else {
-                LOGGER.warning("Wrong meta format");
-            }
+        else if (response == 51) {
+            BigInteger[] meta = new BigInteger[2];
+            for (int i = 0; i < 2; i++) meta[i] = readBigint();
+            UserKey key = RSAClientKeys.getPublicKey();
+            key.setMeta(meta);
+            return key;
         }
         return null;
     }
 
-    private void requestServerKey() throws WrongKeyException, ServerResponseException {
-        write("GET RSA KEY");
-        List<String> keyString = read();
-        if (keyString.size() >= 5) {
-            serverKey = new UserKey(new BigInteger[]{
-                    new BigInteger(keyString.getFirst()),
-                    new BigInteger(keyString.get(1))
-            }, new User(keyString.get(4)));
-            serverKey.setMeta(new BigInteger[]{
-                    new BigInteger(keyString.get(2)),
-                    new BigInteger(keyString.get(3))
-            });
-            if (!serverKey.getUser().getId().equals("#SERVER#") || !RSAKeys.isKey(serverKey)) {
+    private void requestServerKey() throws WrongKeyException {
+        writeCommand(10);
+        byte status = readCommand();
+        if (status == 52){
+            BigInteger[] key = new BigInteger[]{readBigint(), readBigint()};
+            BigInteger[] meta = new BigInteger[]{readBigint(), readBigint()};
+            serverKey = new UserKey(key, new User(readString()));
+            serverKey.setMeta(meta);
+            if (!serverKey.getUser().getId().equals("#SERVER#") || !RSAKeysPair.isKey(serverKey)) {
                 throw new WrongKeyException("Wrong server key");
             }
-        } else {
-            LOGGER.warning("Wrong key format");
-            throw new WrongKeyException("Wrong key format");
+        }
+        else {
+            throw new RuntimeException();
         }
     }
 
-    public void init() throws WrongKeyException, ServerResponseException {
-        if (serverKey == null){
-            requestServerKey();
-        }
-        if (RSAClientKeys.isNeedToRegister()) {
-            RSAClientKeys.register(registerKey());
-        }
-        write("KEY");
+    public boolean isInitialized() {
+        return initialized;
+    }
+
+    public void init() throws WrongKeyException, InitializationException {
+        if (serverKey == null) requestServerKey();
+        if (RSAClientKeys.isNeedToRegister()) RSAClientKeys.register(registerKeyRequest());
+        writeCommand(20);
+        writePackageCount(5);
         UserKey clientKey = RSAClientKeys.getPublicKey();
-        String[] key = new String[]{clientKey.getKey()[0].toString(), clientKey.getKey()[1].toString(),
-                clientKey.getMeta()[0].toString(), clientKey.getMeta()[1].toString(), RSA.encodeString(clientKey.getUser().getId(), serverKey)};
-        write(key);
+        for (int i = 0; i < 2; i++) write(clientKey.getKey()[i]);
+        for (int i = 0; i < 2; i++) write(clientKey.getMeta()[i]);
+        write(RSA.encodeStringToByte(clientKey.getUser().getId(), serverKey));
         if (checkInitialization()) {
             initialized = true;
-            String login = RSAClientKeys.getUserId()+"\n"+RSAClientKeys.getPassword()+"\n";
-            write(login);
-            String status = readFirst();
-            if (status.equals("AUTHENTICATION ERROR")) {
+            try {
+                serverSocket.setSoTimeout(0);
+                serverSocket.setKeepAlive(true);
+            } catch (SocketException e) {
+                LOGGER.warning("Socket exception\n" + LogFormatter.formatStackTrace(e));
+            }
+            writeCommand(23);
+            writePackageCount(2);
+            write(RSAClientKeys.getUserId());
+            write(RSAClientKeys.getPassword(), false);
+            byte status = readCommand();
+            if (status == 62) {
                 LOGGER.warning("AUTHENTICATION ERROR");
                 ResourcesIO.delete("RSA/userKeys" + ResourcesIO.EXTENSION);
                 close();
@@ -111,21 +121,22 @@ public class ServerIO implements AutoCloseable {
             LOGGER.info("Handshake complete");
         }
         else {
-            LOGGER.warning("Fail initialization");
             close();
-            //todo
+            throw new InitializationException("Fail initialization");
         }
     }
 
-    private boolean checkInitialization() throws ServerResponseException{
-        String response = readFirst();
-        if (response.equals("Wrong key")) {
-            ResourcesIO.delete("RSA/userKeys.json");
+    private boolean checkInitialization() {
+        byte response = readCommand();
+        if (response == 63) {
+            ResourcesIO.delete("RSA/userKeys" + ResourcesIO.EXTENSION);
         }
-        if (RSA.decodeString(response, RSAClientKeys.getPrivateKey()).equals("INITIALIZED")) {
-            write(RSA.encodeString("INITIALIZED", serverKey));
-            return RSA.decodeString(readFirst(), RSAClientKeys.getPrivateKey()).equals("OK");
+        else if (response == 30) {
+            write(RSA.encodeByteArray(new byte[]{30}, serverKey), false);
+            response = readCommand();
+            return response == 50;
         }
+
         return false;
     }
 
@@ -137,97 +148,111 @@ public class ServerIO implements AutoCloseable {
         return serverKey;
     }
 
-    public String readFirst() throws ServerResponseException{
-        List<String> list = read();
-        if (!list.isEmpty()) {
-            return list.getFirst();
-        }
-        return "";
+    public String readString() {
+        String string = new String(read());
+        LOGGER.finer("Get message:\n" + string);
+        return string;
     }
 
-    public synchronized List<String> read() throws ServerResponseException{
-        List<String> lines = new ArrayList<>();
-        try {
-            String inputString = dis.readUTF();
-            String original = inputString;
-            if (initialized) {
-                inputString = RSA.decodeString(inputString, RSAClientKeys.getPrivateKey());
+    public byte readCommand() {
+        byte command = read()[0];
+        LOGGER.finer("Get command:\n" + command);
+        return command;
+    }
+
+    public BigInteger readBigint() {
+        BigInteger bigint = new BigInteger(read());
+        LOGGER.finer("Get message:\n" + bigint);
+        return bigint;
+    }
+
+    public byte[] read() {
+        byte[] result;
+        if (Thread.currentThread().getName().startsWith("Main")) {
+            synchronized (router.mainThreadInput) {
+                while (router.mainThreadInput.isEmpty() && !isClosed) {
+                    try {
+                        router.mainThreadInput.wait();
+                    } catch (InterruptedException e) {
+                        LOGGER.warning("Threads exception\n" + LogFormatter.formatStackTrace(e));
+                    }
+                }
+                result = router.mainThreadInput.poll();
             }
-            lines = new ArrayList<>(List.of(inputString.split("\n")));
-            StringBuilder stringBuilder = new StringBuilder();
-            for (String line : lines)
-                stringBuilder.append(line).append("\n");
-            if (!stringBuilder.toString().startsWith("CHECK"))
-                LOGGER.info((initialized ? "Get message:\n" + original+"\nDecoded:" +inputString : "Message sent:\n" + inputString));//todo FINER
-        } catch (IOException e) {
-            LOGGER.warning("Can't read lines\n" + LogFormatter.formatStackTrace(e));
         }
-        if (lines.isEmpty() || lines.getFirst().equals("500 ERROR")) {
-            close();
-            throw new ServerResponseException("Server response error");
+        else {
+            synchronized (router.sideThreadInput) {
+                while (router.sideThreadInput.isEmpty() && !isClosed) {
+                    try {
+                        router.sideThreadInput.wait();
+                    } catch (InterruptedException e) {
+                        LOGGER.warning("Threads exception\n" + LogFormatter.formatStackTrace(e));
+                    }
+                }
+                result = router.sideThreadInput.poll();
+            }
         }
-        return lines;
+        return result;
     }
 
-    public synchronized void write(String message) {
-        write(message, Level.INFO); //todo FINER
+    public void write(String message) {
+        write(message, true);
     }
 
-    public synchronized void write(String message, Level level) {
-        if (message == null) {
-            LOGGER.warning("Null message");
-            return;
-        }
-        String original = message;
+    public void write(String message, boolean log) {
         if (!isClosed){
+            write(message.getBytes());
+            if (log) LOGGER.finer("Message sent:\n" + message);
+        }
+    }
+
+
+    public void write(BigInteger message) {
+        LOGGER.finer("Write bigint:\n" + message);
+        write(message.toByteArray());
+    }
+
+    public void writeCommand(int message) {
+        LOGGER.finer("Write command: " + message);
+        write(new byte[]{(byte) message}, false);
+    }
+
+    public void writePackageCount(int count) {
+        if (!isClosed) {
             try {
-                if (initialized)
-                    message = RSA.encodeString(message, serverKey);
-                dos.writeUTF(message);
+                dos.writeInt(count);
                 dos.flush();
-                if (SimpleInterface.isKeepAlive() || Messenger.getChecking()) Main.simpleInterface.updateTimer();
-                LOGGER.log(level, (initialized ? "Message sent:\n" + original+"\nEncoded:" + message : "Message sent:\n" + message));
             } catch (IOException e) {
                 LOGGER.warning("Can't send the message\n" + LogFormatter.formatStackTrace(e));
             }
         }
-        else {
-            close();
-        }
     }
 
-    public synchronized void write(String[] lines) {
-        write(lines, Level.INFO);//todo FINER
+    public void write(byte[] message) {
+        write(message, true);
     }
 
-    public synchronized void write(String[] lines, Level level) {
-        if (lines == null || lines.length == 0) {
-            LOGGER.warning("Null message");
-            return;
-        }
-        StringBuilder stringBuilder = new StringBuilder();
-        for (String line : lines)
-            stringBuilder.append(line).append("\n");
-        String message = stringBuilder.toString();
-        String original = message;
-        try {
-            if (initialized) message = RSA.encodeString(message, serverKey);
-            dos.writeUTF(message);
-            dos.flush();
-            LOGGER.log(level, (initialized ? "Message sent:\n" + original+"\nEncoded:" +message : "Message sent:\n" + message));
-            if (SimpleInterface.isKeepAlive() || Messenger.getChecking()) Main.simpleInterface.updateTimer();
-        } catch (IOException e) {
-            LOGGER.warning("Can't send the message\n" + LogFormatter.formatStackTrace(e));
+    public void write(byte[] message, boolean sendPackageSize) {
+        if (!isClosed) {
+            LOGGER.finest("Sending byte message");
+            try {
+                if (initialized) message = RSA.encodeByteArray(message, serverKey);
+                if (sendPackageSize) dos.writeInt(message.length);
+                dos.write(message);
+                dos.flush();
+            } catch (IOException e) {
+                LOGGER.warning("Can't send the message\n" + LogFormatter.formatStackTrace(e));
+            }
         }
     }
 
     public void close() {
-        if (initialized && !isClosed) write("EXIT");
+        if (initialized && !isClosed) writeCommand(99);
         isClosed = true;
-        SimpleInterface.disableKeepAlive();
         try {
             dis.close();
             dos.close();
+            router.close();
         } catch (IOException e) {
             LOGGER.warning("Can't close streams\n" + LogFormatter.formatStackTrace(e));
         }

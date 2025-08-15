@@ -131,7 +131,7 @@ public class ResourcesIO {
     public static <T> T readJSON(String filePath, Class<T> classOfT) {
         File file = new File(ROOT_FOLDER + filePath);
         if (file.exists()) {
-            try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8));){
+            try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))){
                 Gson gson = new Gson();
                 T object = gson.fromJson(bufferedReader, classOfT);
                 return object;

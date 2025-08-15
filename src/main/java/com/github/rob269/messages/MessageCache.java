@@ -1,4 +1,4 @@
-package com.github.rob269;
+package com.github.rob269.messages;
 
 import java.io.Serializable;
 import java.util.List;

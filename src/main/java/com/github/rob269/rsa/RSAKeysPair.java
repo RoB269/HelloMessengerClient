@@ -5,20 +5,20 @@ import com.google.gson.annotations.SerializedName;
 
 import java.math.BigInteger;
 
-public class RSAKeys {
+public class RSAKeysPair {
     @SerializedName("public_key")
     private UserKey publicKey;
     @SerializedName("private_key")
     private final Key privateKey;
     private final User user;
 
-    public RSAKeys(UserKey publicKey, Key privateKey, User user) {
+    public RSAKeysPair(UserKey publicKey, Key privateKey, User user) {
         this.publicKey = publicKey;
         this.privateKey = privateKey;
         this.user = user;
     }
 
-    public RSAKeys(BigInteger[][] keys, User user) {
+    public RSAKeysPair(BigInteger[][] keys, User user) {
         this.publicKey = new UserKey(keys[0], user);
         this.privateKey = new Key(keys[1]);
         this.user = user;
@@ -43,12 +43,12 @@ public class RSAKeys {
     public static boolean isKey(UserKey key) {
         BigInteger[] meta = key.getMeta();
         BigInteger[] keyData = key.getKey();
-        BigInteger one = (new BigInteger(RSA.decode(meta[0], Guarantor.getPublicKey())).subtract(keyData[0]));
-        BigInteger two = (new BigInteger(RSA.decode(meta[1], Guarantor.getPublicKey()))).subtract(keyData[1]);
+        BigInteger one = (RSA.decode(meta[0], Guarantor.getPublicKey()).subtract(keyData[0]));
+        BigInteger two = (RSA.decode(meta[1], Guarantor.getPublicKey())).subtract(keyData[1]);
         return one.compareTo(two) == 0 && one.compareTo(BigInteger.valueOf(key.getUser().hashCode())) == 0;
     }
 
-    public static boolean isKeys(RSAKeys keys) {
+    public static boolean isKeys(RSAKeysPair keys) {
         if (isKey(keys.getPublicKey())) {
             String a = RSA.encode(1, keys.getPublicKey());
             String b = RSA.decode(a, keys.getPrivateKey());
@@ -68,7 +68,7 @@ public class RSAKeys {
 
     @Override
     public boolean equals(Object obj) {
-        if (!(obj instanceof RSAKeys keys)) return false;
+        if (!(obj instanceof RSAKeysPair keys)) return false;
         return this.publicKey.equals(keys.publicKey) && this.privateKey.equals(keys.privateKey);
     }
 }

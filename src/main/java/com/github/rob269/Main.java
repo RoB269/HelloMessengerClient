@@ -20,11 +20,11 @@ public class Main {
             logsDir.mkdir();
         }
     }
-    private static String ip = "127.0.0.1";
+    private static String serverIp = "127.0.0.1";
     private static boolean mini = false;
     private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
     public static ServerIO serverIO;
-    public static SimpleInterface simpleInterface;
+//    public static SimpleUserInterface simpleUserInterface; todo
 
     public static void main(String[] args) {
         for (int i = 0; i < args.length; i++) {
@@ -34,17 +34,17 @@ public class Main {
                     i += 2;
                 }
                 else {
-                    LOGGER.warning("Login exception");
+                    LOGGER.warning("Login arguments exception");
                 }
             }
             else if (args[i].equals("-lang")) {
                 if (i+1< args.length) {
-                    SimpleInterface.lang = args[i+1];
+//                    SimpleUserInterface.lang = args[++i]; todo
                 }
             }
             else if (args[i].equals("-ip")) {
                 if (i+1 < args.length) {
-                    ip = args[i+1];
+                    serverIp = args[++i];
                 }
             } else if (args[i].equals("-mini")) {
                 mini = true;
@@ -60,38 +60,37 @@ public class Main {
     public static void serverConnect() {
         if (!RSAClientKeys.isLogin()) {
             Scanner scanner = new Scanner(System.in);
-            System.out.print(SimpleInterface.lang.equals("RU") ? "Имя пользователя: " : "Username: ");
+//            System.out.print(SimpleUserInterface.lang.equals("RU") ? "Имя пользователя: " : "Username: "); todo
             String username = scanner.nextLine();
-            System.out.print(SimpleInterface.lang.equals("RU") ? "Пароль: " : "Password: ");
+//            System.out.print(SimpleUserInterface.lang.equals("RU") ? "Пароль: " : "Password: ");
             String password = scanner.nextLine();
             RSAClientKeys.login(username, password);
         }
         RSAClientKeys.initKeys();
-        Socket clientSocket = null;
+        Socket serverSocket = null;
         try {
-            clientSocket = new Socket(ip, 5099);
-            serverIO = new ServerIO(clientSocket);
-            try {
-                clientSocket.setSoTimeout((int) TimeUnit.SECONDS.toMillis(10));
-            } catch (SocketException e) {
-                LOGGER.warning("Time out exception");
-            }
+            Thread.currentThread().setName("MainConnectionThread");
+            serverSocket = new Socket(serverIp, 5099);
+            serverIO = new ServerIO(serverSocket);
+            serverSocket.setSoTimeout((int) TimeUnit.SECONDS.toMillis(10));
             serverIO.init();
-            simpleInterface = new SimpleInterface(serverIO);
-            simpleInterface.checking();
-            simpleInterface.uiPanel();
+//            simpleUserInterface = new SimpleUserInterface(serverIO); todo
+//            simpleUserInterface.uiPanel();
+            Scanner scanner = new Scanner(System.in);
+            serverIO.writeCommand(scanner.nextInt());
+            scanner.nextInt();
         } catch (IOException e) {
             LOGGER.warning("Can't connect to server\n" + LogFormatter.formatStackTrace(e));
         } catch (WrongKeyException e) {
             LOGGER.warning(LogFormatter.formatStackTrace(e));
-        } catch (ServerResponseException e) {
-            LOGGER.warning("Wrong server response\n" + LogFormatter.formatStackTrace(e));
+        } catch (InitializationException e) {
+            LOGGER.warning("Fail initialization");
         }
         finally {
-            if (clientSocket != null){
+            if (serverSocket != null){
                 serverIO.close();
                 try {
-                    clientSocket.close();
+                    serverSocket.close();
                 } catch (IOException e) {
                     LOGGER.warning("Client socket closing exception\n" + LogFormatter.formatStackTrace(e));
                 }

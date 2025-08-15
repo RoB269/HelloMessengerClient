@@ -1,2 +1,7 @@
-package com.github.rob269;public class InitializationException {
+package com.github.rob269;
+
+public class InitializationException extends Exception {
+    public InitializationException(String message) {
+        super(message);
+    }
 }

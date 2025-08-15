@@ -5,28 +5,21 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
-import java.util.logging.Logger;
 
 public class RSA {
-    private static final Logger LOGGER = Logger.getLogger(RSA.class.getName());
-
     private static final int DEFAULT_KEY_SIZE = 512;
     private static final int MAX_PACKAGE_SIZE = 64;
 
-    public static String encode(BigInteger a, Key key) {
-        return String.valueOf(a.modPow(key.getKey()[0], key.getKey()[1]));
+    public static BigInteger encode(BigInteger a, Key key) {
+        return a.modPow(key.getKey()[0], key.getKey()[1]);
     }
 
     public static String encode(int a, Key key) {
         return String.valueOf(BigInteger.valueOf(a).modPow(key.getKey()[0], key.getKey()[1]));
     }
 
-    public static String decode(BigInteger a, Key key) {
-        return String.valueOf(a.modPow(key.getKey()[0], key.getKey()[1]));
-    }
-
-    public static String decode(int a, Key key) {
-        return String.valueOf(BigInteger.valueOf(a).modPow(key.getKey()[0], key.getKey()[1]));
+    public static BigInteger decode(BigInteger a, Key key) {
+        return a.modPow(key.getKey()[0], key.getKey()[1]);
     }
 
     public static String decode(String a, Key key) {
@@ -34,9 +27,10 @@ public class RSA {
     }
 
     static final BigInteger n256 = new BigInteger("256");
-    public synchronized static String encodeString(String string, Key key) {
+    @Deprecated
+    public static String encodeString(String string, Key key) {
         byte[] byteString = string.getBytes();
-        BigInteger[] integerString = new BigInteger[(int) Math.ceil(byteString.length/(double) MAX_PACKAGE_SIZE)];
+        BigInteger[] integerString = new BigInteger[(int) Math.ceil((double) byteString.length / MAX_PACKAGE_SIZE)];
         Arrays.fill(integerString, BigInteger.ZERO);
         int j;
         for (int i = 0; i < byteString.length; i++) {
@@ -55,7 +49,8 @@ public class RSA {
         return builder.toString();
     }
 
-    public synchronized static String decodeString(String string, Key key) {
+    @Deprecated
+    public static String decodeString(String string, Key key) {
         String[] strings = string.split("/");
         List<Byte> byteString = new ArrayList<>();
         for (String s : strings) {
@@ -76,7 +71,69 @@ public class RSA {
         return new String(bytes);
     }
 
-    public synchronized static BigInteger[][] generateKeys(int bitSize) {
+    public static byte[] encodeStringToByte(String string, Key key) {
+        return encodeByteArray(string.getBytes(), key);
+    }
+
+    public static String decodeByteToString(byte[] bytes, Key key) {
+        return new String(decodeByteArray(bytes, key));
+    }
+
+    public static byte[] encodeByteArray(byte[] byteString, Key key) {
+        BigInteger[] integerString = new BigInteger[(int) Math.ceil((double) byteString.length / MAX_PACKAGE_SIZE)];
+        Arrays.fill(integerString, BigInteger.ZERO);
+        for (int i = 0, j; i < byteString.length; i++) {
+            j = i/MAX_PACKAGE_SIZE;
+            BigInteger byteVar = BigInteger.valueOf(byteString[i]);
+            if (byteVar.compareTo(BigInteger.ZERO) < 0) byteVar = byteVar.add(n256);
+            integerString[j] = integerString[j].add(byteVar.multiply(n256.pow(i%MAX_PACKAGE_SIZE)));
+        }
+        byte[] encodedByteString = new byte[integerString.length*129];
+        for (int i = 0; i < integerString.length; i++) {
+            BigInteger integer = RSA.encode(integerString[i], key);
+            byte[] bytes = integer.toByteArray();
+            if (bytes.length == 128) {
+                encodedByteString[129*i] = 1;
+                for (int k = 0; k < 128; k++) {
+                    encodedByteString[129*i+1+k] = bytes[k];
+                }
+            }
+            else {
+                System.arraycopy(bytes, 0, encodedByteString, 129 * i, 129);
+            }
+        }
+        return encodedByteString;
+    }
+
+    public static byte[] decodeByteArray(byte[] byteString, Key key) {
+        byte[] bytePackage129 = new byte[129];
+        byte[] bytePackage128 = new byte[128];
+        byte[] decodedByteString = new byte[byteString.length/129*64];
+        int ind = 0;
+        for (int i = 0; i < byteString.length/129; i++) {
+            BigInteger integer;
+            if (byteString[i*129] == 0) {
+                System.arraycopy(byteString, i * 129, bytePackage129, 0, 129);
+                integer = new BigInteger(bytePackage129);
+            }
+            else {
+                for (int j = 0; j < 128; j++) bytePackage128[j] = byteString[i * 129 + 1 + j];
+                integer = new BigInteger(bytePackage128);
+            }
+            integer = decode(integer, key);
+            while (integer.compareTo(BigInteger.ZERO) != 0) {
+                int mod = integer.mod(n256).intValue();
+                decodedByteString[ind] = (byte) mod;
+                integer = integer.divide(n256);
+                ind++;
+            }
+        }
+        byte[] result = new byte[ind];
+        System.arraycopy(decodedByteString, 0, result, 0, ind);
+        return result;
+    }
+
+    public static BigInteger[][] generateKeys(int bitSize) {
         BigInteger p = BigInteger.probablePrime(bitSize, new Random());
         BigInteger q = BigInteger.probablePrime(bitSize, new Random());
         BigInteger N = p.multiply(q);
@@ -91,7 +148,7 @@ public class RSA {
         return new BigInteger[][]{publicKey, privateKey};
     }
 
-    public static BigInteger[][] generateKeys(){
+    public static BigInteger[][] generateKeys() {
         return generateKeys(DEFAULT_KEY_SIZE);
     }
 }
