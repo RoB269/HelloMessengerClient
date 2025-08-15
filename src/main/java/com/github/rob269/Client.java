@@ -1,26 +1,27 @@
-package com.github.rob269.rsa;
+package com.github.rob269;
 
-import com.github.rob269.UserAccount;
 import com.github.rob269.io.ResourcesIO;
+import com.github.rob269.rsa.Key;
+import com.github.rob269.rsa.RSA;
+import com.github.rob269.rsa.RSAKeysPair;
 
 import java.math.BigInteger;
 import java.util.logging.Logger;
 
-public class RSAClientKeys {
+public class Client {
     private static boolean isLogin = false;
     private static RSAKeysPair userKeys;
-    private static UserAccount user = null;
-    private static final Logger LOGGER = Logger.getLogger(RSAClientKeys.class.getName());
-    private static boolean needToRegister = false;
+    private static User user = null;
+    private static final Logger LOGGER = Logger.getLogger(Client.class.getName());
 
     public static void initKeys() {
         if (ResourcesIO.isExist("RSA/userKeys.json")) {
             try {
                 RSAKeysPair userKeys = ResourcesIO.readJSON("RSA/userKeys.json", RSAKeysPair.class);
-                if (userKeys == null || userKeys.getUser() == null) {
+                if (userKeys == null) {
                     throw new NullPointerException();
                 }
-                RSAClientKeys.userKeys = userKeys;
+                Client.userKeys = userKeys;
                 LOGGER.fine("The keys have been read");
             } catch (NullPointerException e) {
                 LOGGER.warning("Keys not found");
@@ -34,7 +35,7 @@ public class RSAClientKeys {
     }
 
     public static void login(String username, String password) {
-        user = new UserAccount(username, password);
+        user = new User(username, password);
         isLogin = true;
     }
 
@@ -42,31 +43,14 @@ public class RSAClientKeys {
         return isLogin;
     }
 
-    public static void register(UserKey key) throws WrongKeyException{
-        if (key != null && needToRegister){
-            userKeys.setPublicKey(key);
-            ResourcesIO.writeJSON("RSA/userKeys" + ResourcesIO.EXTENSION, userKeys);
-            needToRegister = false;
-            LOGGER.fine("Key was registered");
-        }
-        else if (key == null){
-            LOGGER.warning("Key is null");
-            throw new WrongKeyException("Key is null");
-        }
-    }
-
-    public static boolean isNeedToRegister() {
-        return needToRegister;
-    }
-
     private static void generateNewKeys() {
         BigInteger[][] keys = RSA.generateKeys();
-        needToRegister = true;
-        RSAClientKeys.userKeys = new RSAKeysPair(keys, user);
-        LOGGER.fine("The keys were generated");
+        Client.userKeys = new RSAKeysPair(keys);
+        ResourcesIO.writeJSON("RSA/userKeys"+ResourcesIO.EXTENSION, userKeys);
+        LOGGER.fine("The keys were generated and written to the file");
     }
 
-    public static UserKey getPublicKey() {
+    public static Key getPublicKey() {
         return userKeys.getPublicKey();
     }
 

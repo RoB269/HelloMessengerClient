@@ -1,13 +1,23 @@
 package com.github.rob269;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 public class User {
-    private String id;
+    private final String password;
+    private final String id;
 
-    public User(String id) {
+
+    public User(String id, String password) {
         this.id = id;
+        this.password = password;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public String getId() {
+        return id;
     }
 
     @Override
@@ -21,14 +31,6 @@ public class User {
     @Override
     public int hashCode() {
         return id.hashCode();
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
     }
 
     @Override

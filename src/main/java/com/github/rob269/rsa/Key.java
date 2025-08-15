@@ -1,7 +1,5 @@
 package com.github.rob269.rsa;
 
-import com.github.rob269.User;
-
 import java.math.BigInteger;
 
 public class Key {

@@ -1,8 +1,7 @@
 package com.github.rob269.io;
 
-import com.github.rob269.LogFormatter;
+import com.github.rob269.Client;
 import com.github.rob269.rsa.RSA;
-import com.github.rob269.rsa.RSAClientKeys;
 
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -11,8 +10,7 @@ import java.util.logging.Logger;
 
 public class InputRouter extends Thread {
     private static final Logger LOGGER = Logger.getLogger(InputRouter.class.getName());
-    private DataInputStream dis;
-    private boolean isClosed = false;
+    private final DataInputStream dis;
     public final Deque<byte[]> mainThreadInput = new ArrayDeque<>();
     public final Deque<byte[]> sideThreadInput = new ArrayDeque<>();
     private final ServerIO serverIO;
@@ -23,7 +21,6 @@ public class InputRouter extends Thread {
     }
 
     public void close() {
-        isClosed = true;
         interrupt();
     }
 
@@ -31,14 +28,14 @@ public class InputRouter extends Thread {
     @Override
     public void run() {
         try {
-            while (!isClosed) {
-                byte[] input = new byte[129];
+            while (!isInterrupted()) {
+                byte[] input = new byte[130];
                 int inputSize = dis.read(input);
                 int command;
                 if (inputSize == -1) {
                     break;
-                } else if (inputSize == 129) {
-                    command = RSA.decodeByteArray(input, RSAClientKeys.getPrivateKey())[0];
+                } else if (inputSize == 130) {
+                    command = RSA.decodeByteArray(input, Client.getPrivateKey())[0];
                 } else {
                     command = input[0];
                 }
@@ -50,7 +47,7 @@ public class InputRouter extends Thread {
                             int byteLength = dis.readInt();
                             byte[] bytes = new byte[byteLength];
                             dis.read(bytes);
-                            if (serverIO.isInitialized()) bytes = RSA.decodeByteArray(bytes, RSAClientKeys.getPrivateKey());
+                            if (serverIO.isInitialized()) bytes = RSA.decodeByteArray(bytes, Client.getPrivateKey());
                             mainThreadInput.add(bytes);
                         }
                     }

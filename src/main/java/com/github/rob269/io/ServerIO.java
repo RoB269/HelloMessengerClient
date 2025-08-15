@@ -10,18 +10,17 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.net.Socket;
 import java.net.SocketException;
-import java.util.Arrays;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class ServerIO implements Closeable {
     private Socket serverSocket;
     private DataOutputStream dos;
     private DataInputStream dis;
-    private static UserKey serverKey;
+    private static Key serverKey;
     private boolean isClosed = false;
     private boolean initialized = false;
     private InputRouter router;
+    private static final String serverName = "#SERVER#";
 
     private static final Logger LOGGER = Logger.getLogger(Thread.currentThread().getName() + ":" + ServerIO.class.getName());
 
@@ -38,46 +37,19 @@ public class ServerIO implements Closeable {
         }
     }
 
-    boolean isTry = false;
-    private UserKey registerKeyRequest() {
-        writeCommand(21);
-        UserKey publicKey = RSAClientKeys.getPublicKey();
-        writePackageCount(3);
-        for (int i = 0; i < 2; i++) write(publicKey.getKey()[i]);
-        write(RSA.encodeStringToByte(publicKey.getUser().getId(), serverKey));
-        byte response = readCommand();
-        if (response == 61 && !isTry) {
-            isTry = true;
-            writeCommand(22);
-            writePackageCount(2);
-            write(RSA.encodeStringToByte(publicKey.getUser().getId(), serverKey));
-            write(RSA.encodeStringToByte(RSAClientKeys.getPassword(), serverKey));
-            byte status = readCommand();
-            if (status == 50)
-                return registerKeyRequest();
-            else if (status == 62) {
-                close();//todo
-            }
-        }
-        else if (response == 51) {
-            BigInteger[] meta = new BigInteger[2];
-            for (int i = 0; i < 2; i++) meta[i] = readBigint();
-            UserKey key = RSAClientKeys.getPublicKey();
-            key.setMeta(meta);
-            return key;
-        }
-        return null;
-    }
-
-    private void requestServerKey() throws WrongKeyException {
+    private void requestServerKey() throws WrongKeyException, IOException {
         writeCommand(10);
         byte status = readCommand();
         if (status == 52){
             BigInteger[] key = new BigInteger[]{readBigint(), readBigint()};
             BigInteger[] meta = new BigInteger[]{readBigint(), readBigint()};
-            serverKey = new UserKey(key, new User(readString()));
-            serverKey.setMeta(meta);
-            if (!serverKey.getUser().getId().equals("#SERVER#") || !RSAKeysPair.isKey(serverKey)) {
+            String user = readString();
+            serverKey = new Key(key);
+
+            BigInteger one = (RSA.decode(meta[0], Guarantor.getPublicKey()).subtract(key[0]));
+            BigInteger two = (RSA.decode(meta[1], Guarantor.getPublicKey())).subtract(key[1]);
+            boolean isServerKey = one.compareTo(two) == 0 && one.compareTo(BigInteger.valueOf(user.hashCode())) == 0 && user.equals(serverName);
+            if (!isServerKey) {
                 throw new WrongKeyException("Wrong server key");
             }
         }
@@ -90,15 +62,12 @@ public class ServerIO implements Closeable {
         return initialized;
     }
 
-    public void init() throws WrongKeyException, InitializationException {
+    public void init() throws WrongKeyException, InitializationException, IOException {
         if (serverKey == null) requestServerKey();
-        if (RSAClientKeys.isNeedToRegister()) RSAClientKeys.register(registerKeyRequest());
         writeCommand(20);
-        writePackageCount(5);
-        UserKey clientKey = RSAClientKeys.getPublicKey();
+        writePackageCount(2);
+        Key clientKey = Client.getPublicKey();
         for (int i = 0; i < 2; i++) write(clientKey.getKey()[i]);
-        for (int i = 0; i < 2; i++) write(clientKey.getMeta()[i]);
-        write(RSA.encodeStringToByte(clientKey.getUser().getId(), serverKey));
         if (checkInitialization()) {
             initialized = true;
             try {
@@ -109,8 +78,8 @@ public class ServerIO implements Closeable {
             }
             writeCommand(23);
             writePackageCount(2);
-            write(RSAClientKeys.getUserId());
-            write(RSAClientKeys.getPassword(), false);
+            write(Client.getUserId());
+            write(Client.getPassword(), false);
             byte status = readCommand();
             if (status == 62) {
                 LOGGER.warning("AUTHENTICATION ERROR");
@@ -126,7 +95,7 @@ public class ServerIO implements Closeable {
         }
     }
 
-    private boolean checkInitialization() {
+    private boolean checkInitialization() throws IOException {
         byte response = readCommand();
         if (response == 63) {
             ResourcesIO.delete("RSA/userKeys" + ResourcesIO.EXTENSION);
@@ -136,7 +105,6 @@ public class ServerIO implements Closeable {
             response = readCommand();
             return response == 50;
         }
-
         return false;
     }
 
@@ -148,26 +116,27 @@ public class ServerIO implements Closeable {
         return serverKey;
     }
 
-    public String readString() {
+    public String readString() throws IOException {
         String string = new String(read());
         LOGGER.finer("Get message:\n" + string);
         return string;
     }
 
-    public byte readCommand() {
+    public byte readCommand() throws IOException {
         byte command = read()[0];
         LOGGER.finer("Get command:\n" + command);
         return command;
     }
 
-    public BigInteger readBigint() {
+    public BigInteger readBigint() throws IOException {
         BigInteger bigint = new BigInteger(read());
-        LOGGER.finer("Get message:\n" + bigint);
+        LOGGER.finer("Get bigint:\n" + bigint);
         return bigint;
     }
 
-    public byte[] read() {
+    public byte[] read() throws IOException{
         byte[] result;
+        LOGGER.finest("Reading bytes");
         if (Thread.currentThread().getName().startsWith("Main")) {
             synchronized (router.mainThreadInput) {
                 while (router.mainThreadInput.isEmpty() && !isClosed) {
@@ -192,14 +161,15 @@ public class ServerIO implements Closeable {
                 result = router.sideThreadInput.poll();
             }
         }
+        if (isClosed) throw new IOException();
         return result;
     }
 
-    public void write(String message) {
+    public void write(String message) throws IOException {
         write(message, true);
     }
 
-    public void write(String message, boolean log) {
+    public void write(String message, boolean log) throws IOException {
         if (!isClosed){
             write(message.getBytes());
             if (log) LOGGER.finer("Message sent:\n" + message);
@@ -207,12 +177,12 @@ public class ServerIO implements Closeable {
     }
 
 
-    public void write(BigInteger message) {
+    public void write(BigInteger message) throws IOException {
         LOGGER.finer("Write bigint:\n" + message);
         write(message.toByteArray());
     }
 
-    public void writeCommand(int message) {
+    public void writeCommand(int message) throws IOException {
         LOGGER.finer("Write command: " + message);
         write(new byte[]{(byte) message}, false);
     }
@@ -220,6 +190,7 @@ public class ServerIO implements Closeable {
     public void writePackageCount(int count) {
         if (!isClosed) {
             try {
+                LOGGER.severe("Sending package count"); //todo delete
                 dos.writeInt(count);
                 dos.flush();
             } catch (IOException e) {
@@ -228,25 +199,29 @@ public class ServerIO implements Closeable {
         }
     }
 
-    public void write(byte[] message) {
+    public void write(byte[] message) throws IOException {
         write(message, true);
     }
 
-    public void write(byte[] message, boolean sendPackageSize) {
+    public void write(byte[] message, boolean sendPackageSize) throws IOException{
         if (!isClosed) {
             LOGGER.finest("Sending byte message");
             try {
                 if (initialized) message = RSA.encodeByteArray(message, serverKey);
-                if (sendPackageSize) dos.writeInt(message.length);
+                if (sendPackageSize) {
+                    dos.writeInt(message.length);
+                }
                 dos.write(message);
                 dos.flush();
             } catch (IOException e) {
                 LOGGER.warning("Can't send the message\n" + LogFormatter.formatStackTrace(e));
             }
+            return;
         }
+        throw new IOException();
     }
 
-    public void close() {
+    public void close() throws IOException {
         if (initialized && !isClosed) writeCommand(99);
         isClosed = true;
         try {

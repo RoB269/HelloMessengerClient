@@ -1,14 +1,11 @@
 package com.github.rob269;
 
 import com.github.rob269.io.ServerIO;
-import com.github.rob269.io.ServerResponseException;
-import com.github.rob269.rsa.RSAClientKeys;
 import com.github.rob269.rsa.WrongKeyException;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
-import java.net.SocketException;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
@@ -30,7 +27,7 @@ public class Main {
         for (int i = 0; i < args.length; i++) {
             if (args[i].equals("-login")) {
                 if (i+2<args.length) {
-                    RSAClientKeys.login(args[i + 1], args[i + 2]);
+                    Client.login(args[i + 1], args[i + 2]);
                     i += 2;
                 }
                 else {
@@ -58,27 +55,27 @@ public class Main {
     }
 
     public static void serverConnect() {
-        if (!RSAClientKeys.isLogin()) {
+        if (!Client.isLogin()) {
             Scanner scanner = new Scanner(System.in);
 //            System.out.print(SimpleUserInterface.lang.equals("RU") ? "Имя пользователя: " : "Username: "); todo
             String username = scanner.nextLine();
 //            System.out.print(SimpleUserInterface.lang.equals("RU") ? "Пароль: " : "Password: ");
             String password = scanner.nextLine();
-            RSAClientKeys.login(username, password);
+            Client.login(username, password);
         }
-        RSAClientKeys.initKeys();
-        Socket serverSocket = null;
+        Client.initKeys();
+        Socket clientSocket = null;
         try {
             Thread.currentThread().setName("MainConnectionThread");
-            serverSocket = new Socket(serverIp, 5099);
-            serverIO = new ServerIO(serverSocket);
-            serverSocket.setSoTimeout((int) TimeUnit.SECONDS.toMillis(10));
+            clientSocket = new Socket(serverIp, 5099);
+            serverIO = new ServerIO(clientSocket);
+            clientSocket.setSoTimeout((int) TimeUnit.SECONDS.toMillis(10));
             serverIO.init();
 //            simpleUserInterface = new SimpleUserInterface(serverIO); todo
 //            simpleUserInterface.uiPanel();
-            Scanner scanner = new Scanner(System.in);
-            serverIO.writeCommand(scanner.nextInt());
-            scanner.nextInt();
+//            Scanner scanner = new Scanner(System.in);
+//            serverIO.writeCommand(scanner.nextInt());
+//            scanner.nextInt();
         } catch (IOException e) {
             LOGGER.warning("Can't connect to server\n" + LogFormatter.formatStackTrace(e));
         } catch (WrongKeyException e) {
@@ -87,10 +84,10 @@ public class Main {
             LOGGER.warning("Fail initialization");
         }
         finally {
-            if (serverSocket != null){
-                serverIO.close();
+            if (clientSocket != null){
                 try {
-                    serverSocket.close();
+                    serverIO.close();
+                    clientSocket.close();
                 } catch (IOException e) {
                     LOGGER.warning("Client socket closing exception\n" + LogFormatter.formatStackTrace(e));
                 }
