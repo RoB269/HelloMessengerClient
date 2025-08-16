@@ -1,6 +1,7 @@
 package com.github.rob269.io;
 
 import com.github.rob269.Client;
+import com.github.rob269.LogFormatter;
 import com.github.rob269.rsa.RSA;
 
 import java.io.DataInputStream;
@@ -32,7 +33,7 @@ public class InputRouter extends Thread {
                 byte[] input = new byte[130];
                 int inputSize = dis.read(input);
                 int command;
-                if (inputSize == -1) {
+                if (inputSize == -1 || inputSize != 130 && (serverIO.isInitialized() || input[0] == 30)) {
                     break;
                 } else if (inputSize == 130) {
                     command = RSA.decodeByteArray(input, Client.getPrivateKey())[0];
@@ -59,7 +60,11 @@ public class InputRouter extends Thread {
         }  catch (IOException ignored) {
             LOGGER.info("Input router timeout");
         }
-        serverIO.close();
+        try {
+            serverIO.close();
+        } catch (IOException e) {
+            LOGGER.warning("Server closing exception\n" + LogFormatter.formatStackTrace(e));
+        }
         synchronized (mainThreadInput) {
             mainThreadInput.notify();
         }
