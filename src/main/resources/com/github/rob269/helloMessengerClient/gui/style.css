@@ -1,0 +1,36 @@
+.button {
+    -fx-background-radius: 0;
+}
+
+.icon-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.icon-button:hover {
+    -fx-background-color: rgba(0, 0, 0, 0.1);
+    -fx-background-radius: 16;
+}
+
+.icon-button:pressed {
+    -fx-background-color: rgba(0, 0, 0, 0.3);
+    -fx-background-radius: 16;
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+}
+
+.chat-button {
+    -fx-alignment: CENTER_LEFT;
+    -fx-min-height: 80px;
+    -fx-min-width: 270px;
+}
+
+.massage-background {
+    -fx-arc-width: 30;
+    -fx-arc-height: 30;
+}
+
+.menu-button-item {
+    -fx-pref-width: 270;
+    -fx-font-size: 20;
+}

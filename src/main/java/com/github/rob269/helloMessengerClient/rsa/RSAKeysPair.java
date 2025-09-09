@@ -1,5 +1,6 @@
-package com.github.rob269.rsa;
+package com.github.rob269.helloMessengerClient.rsa;
 
+import com.github.rob269.helloMessengerClient.Main;
 import com.google.gson.annotations.SerializedName;
 
 import java.math.BigInteger;

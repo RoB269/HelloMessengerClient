@@ -1,6 +1,6 @@
-package com.github.rob269.io;
+package com.github.rob269.helloMessengerClient.io;
 
-import com.github.rob269.LogFormatter;
+import com.github.rob269.helloMessengerClient.LogFormatter;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -38,7 +38,8 @@ public class ResourcesIO {
 
     public synchronized static void write(String filePath, List<String> lines, boolean append) {
         File file = new File(ROOT_FOLDER + filePath);
-        if (file.getParentFile().exists()) {
+        LOGGER.severe(file.getParentFile().getAbsolutePath());
+        if (!file.getParentFile().exists()) {
             file.getParentFile().mkdirs();
         }
         if (!file.exists()) {
@@ -50,9 +51,7 @@ public class ResourcesIO {
         }
         try {
             BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file, append), StandardCharsets.UTF_8));
-            for (int i = 0; i < lines.size(); i++) {
-                bufferedWriter.write(lines.get(i) + "\n");
-            }
+            for (String line : lines) bufferedWriter.write(line + "\n");
             bufferedWriter.flush();
             bufferedWriter.close();
         } catch (IOException e) {
@@ -133,8 +132,7 @@ public class ResourcesIO {
         if (file.exists()) {
             try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))){
                 Gson gson = new Gson();
-                T object = gson.fromJson(bufferedReader, classOfT);
-                return object;
+                return gson.fromJson(bufferedReader, classOfT);
             } catch (IOException e) {
                 LOGGER.warning("Can't read the file (" + ROOT_FOLDER + filePath + ") " + e);
             }

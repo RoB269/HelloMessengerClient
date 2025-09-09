@@ -1,9 +1,9 @@
-package com.github.rob269;
+package com.github.rob269.helloMessengerClient;
 
-import com.github.rob269.io.ResourcesIO;
-import com.github.rob269.rsa.Key;
-import com.github.rob269.rsa.RSA;
-import com.github.rob269.rsa.RSAKeysPair;
+import com.github.rob269.helloMessengerClient.io.ResourcesIO;
+import com.github.rob269.helloMessengerClient.rsa.Key;
+import com.github.rob269.helloMessengerClient.rsa.RSA;
+import com.github.rob269.helloMessengerClient.rsa.RSAKeysPair;
 
 import java.math.BigInteger;
 import java.util.logging.Logger;
@@ -15,23 +15,24 @@ public class Client {
     private static final Logger LOGGER = Logger.getLogger(Client.class.getName());
 
     public static void initKeys() {
-        if (ResourcesIO.isExist("RSA/userKeys.json")) {
-            try {
-                RSAKeysPair userKeys = ResourcesIO.readJSON("RSA/userKeys.json", RSAKeysPair.class);
-                if (userKeys == null) {
-                    throw new NullPointerException();
+        if (userKeys == null) {
+            if (ResourcesIO.isExist("RSA/userKeys.json")) {
+                try {
+                    RSAKeysPair userKeys = ResourcesIO.readJSON("RSA/userKeys.json", RSAKeysPair.class);
+                    if (userKeys == null) {
+                        throw new NullPointerException();
+                    }
+                    Client.userKeys = userKeys;
+                    LOGGER.fine("The keys have been read");
+                } catch (NullPointerException e) {
+                    LOGGER.warning("Keys not found");
+                    generateNewKeys();
                 }
-                Client.userKeys = userKeys;
-                LOGGER.fine("The keys have been read");
-            } catch (NullPointerException e) {
-                LOGGER.warning("Keys not found");
+            } else {
                 generateNewKeys();
             }
+            LOGGER.fine("The keys have been initialized");
         }
-        else {
-            generateNewKeys();
-        }
-        LOGGER.fine("The keys have been initialized");
     }
 
     public static void login(String username, String password) {
@@ -62,7 +63,7 @@ public class Client {
         return user.getPassword();
     }
 
-    public static String getUserId() {
-        return user.getId();
+    public static String getUsername() {
+        return user.getUsername();
     }
 }

@@ -1,4 +1,4 @@
-package com.github.rob269.rsa;
+package com.github.rob269.helloMessengerClient.rsa;
 
 import java.math.BigInteger;
 import java.util.ArrayList;

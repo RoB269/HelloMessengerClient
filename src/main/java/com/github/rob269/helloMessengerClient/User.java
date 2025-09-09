@@ -1,14 +1,14 @@
-package com.github.rob269;
+package com.github.rob269.helloMessengerClient;
 
 import java.util.Objects;
 
 public class User {
     private final String password;
-    private final String id;
+    private final String username;
 
 
-    public User(String id, String password) {
-        this.id = id;
+    public User(String username, String password) {
+        this.username = username;
         this.password = password;
     }
 
@@ -16,8 +16,8 @@ public class User {
         return password;
     }
 
-    public String getId() {
-        return id;
+    public String getUsername() {
+        return username;
     }
 
     @Override
@@ -25,16 +25,16 @@ public class User {
         if (this == object) return true;
         if (object == null || getClass() != object.getClass()) return false;
         User user = (User) object;
-        return Objects.equals(id, user.id);
+        return Objects.equals(username, user.username);
     }
 
     @Override
     public int hashCode() {
-        return id.hashCode();
+        return username.hashCode();
     }
 
     @Override
     public String toString() {
-        return id;
+        return username;
     }
 }
