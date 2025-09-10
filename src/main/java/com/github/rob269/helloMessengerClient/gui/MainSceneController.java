@@ -12,9 +12,11 @@ import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
@@ -88,23 +90,33 @@ public class MainSceneController implements Initializable {
     void onCreateNewChatButton(ActionEvent event) {
         menuText.setText("Enter chat name");
         type = MenuType.CREATE_NEW_CHAT;
-        menuPane.setVisible(true);
+        showMenu();
     }
 
     @FXML
     void onAddChatButton(ActionEvent event) {
         menuText.setText("Enter chat id");
         type = MenuType.ADD_CHAT;
-        menuPane.setVisible(true);
+        showMenu();
     }
 
     @FXML
     void onAddContactButton(ActionEvent event) {
         menuText.setText("Enter contact name");
         type = MenuType.ADD_CONTACT;
-        menuPane.setVisible(true);
+        showMenu();
     }
 
+    private void showMenu() {
+        menuTextField.clear();
+        menuPane.setVisible(true);
+        menuErrorMessage.setVisible(false);
+    }
+
+    public void printMenuErrorMessage(String message) {
+        menuErrorMessage.setText(message);
+        menuErrorMessage.setVisible(true);
+    }
 
     @FXML
     void onMenuEnterKey(KeyEvent event) {
@@ -125,13 +137,26 @@ public class MainSceneController implements Initializable {
         if (!menuTextField.getText().isEmpty()) {
             switch (type) {
                 case MenuType.ADD_CONTACT -> {
-                    System.out.println(1);//todo HEREEEEEEEEEEEEEEEEEEEEE
+                    Chat chat = Main.messenger.addContact(menuTextField.getText());
+                    if (chat == null) return;
+                    addChat(chat);
                 }
                 case MenuType.ADD_CHAT -> {
-                    System.out.println(2);
+                    long chatId;
+                    try {
+                        chatId = Long.parseLong(menuTextField.getText());
+                    } catch (NumberFormatException _) {
+                        printMenuErrorMessage("Wrong enter");
+                        return;
+                    }
+                    Chat chat = Main.messenger.connectToTheChat(chatId);
+                    if (chat == null) return;
+                    addChat(chat);
                 }
                 case MenuType.CREATE_NEW_CHAT -> {
-                    System.out.println(3);
+                    Chat chat = Main.messenger.createChat(menuTextField.getText());
+                    if (chat == null) return;
+                    addChat(chat);
                 }
             }
             menuTextField.clear();
@@ -149,6 +174,7 @@ public class MainSceneController implements Initializable {
         String message = Main.serverConnect();
         if (message.equals("OK")) {
             hideErrorMessage();
+            addMessagesToPane(Main.selectedChatId);
             Main.initChats();
         }
         else {
@@ -175,10 +201,17 @@ public class MainSceneController implements Initializable {
     void onChatButton(ActionEvent event) {
         ChatButton button = (ChatButton) event.getTarget();
         contactName.setText(button.getText());
-        LinkedList<Message> messages = Main.messenger.getChats().get(button.getChatId()).getMessages();
+        addMessagesToPane(button.getChatId());
+        Main.selectedChatId = button.getChatId();
+        needScrollDown = true;
+        contactName.setVisible(true);
+    }
+
+    private void addMessagesToPane(long chatId) {
+        LinkedList<Message> messages = Main.messenger.getChats().get(chatId).getMessages();
         if (messages.getFirst().getMessageId() != 0 && messages.size() < Messenger.MESSAGE_PACK_SIZE) {
             try {
-                Main.messenger.loadMessages(button.getChatId());
+                Main.messenger.loadMessages(chatId);
             } catch (IOException _) {
             }
         }
@@ -188,9 +221,6 @@ public class MainSceneController implements Initializable {
         while (cursor.hasPrevious()) {
             addMessage(cursor.previous(), true);
         }
-        Main.selectedChatId = button.getChatId();
-        needScrollDown = true;
-        contactName.setVisible(true);
     }
 
     public void addChat(Chat chat) {
@@ -214,32 +244,59 @@ public class MainSceneController implements Initializable {
     }
 
     public void addMessage(Message message, boolean addFirst) {
-        Text messageText = new Text(message.getMessage());
-        messageText.setFont(new Font(20));
-        StackPane.setMargin(messageText, new Insets(0, 0, 0, 7));
+        if (message.getMessageId() != 0) {
+            Text messageText = new Text(message.getMessage());
+            messageText.setFont(new Font(20));
+            StackPane.setMargin(messageText, new Insets(0, 0, 0, 7));
 
-        double textWidth = messageText.getLayoutBounds().getWidth();
-        if (textWidth > maxMessageWidth) textWidth = maxMessageWidth;
-        messageText.setWrappingWidth(maxMessageWidth);
-        Rectangle background = new Rectangle(textWidth + 16, messageText.getLayoutBounds().getHeight() + 16);
-        background.getStyleClass().add("massage-background");
-        if (message.getSender().equals(Client.getUsername())) background.setFill(Color.rgb(57, 213, 39));
-        else background.setFill(Color.rgb(57, 213, 39, 0.3));
+            double textWidth = messageText.getLayoutBounds().getWidth();
+            if (textWidth > maxMessageWidth) textWidth = maxMessageWidth;
+            messageText.setWrappingWidth(maxMessageWidth);
+            Rectangle background = new Rectangle(textWidth + 16, messageText.getLayoutBounds().getHeight() + 16);
+            background.getStyleClass().add("massage-background");
+            if (message.getSender().equals(Client.getUsername())) background.setFill(Color.rgb(57, 213, 39));
+            else background.setFill(Color.rgb(57, 213, 39, 0.3));
 
-        StackPane stackPane = new StackPane(background, messageText);
-        stackPane.setAlignment(Pos.CENTER_LEFT);
-        VBox.setMargin(stackPane, new Insets(0, 0, 12, 7));
+            StackPane stackPane = new StackPane(background, messageText);
+            stackPane.setAlignment(Pos.CENTER_LEFT);
+            VBox.setMargin(stackPane, new Insets(0, 0, 12, 7));
 
-        Text additionalData = new Text(message.getSender() + " at " + message.getDate().getTime());
-        VBox.setMargin(additionalData, new Insets(0, 0, 0, 7));
-        VBox vBox = new VBox(additionalData, stackPane);
-        vBox.setPadding(new Insets(7, 0, 0, 0));
+            Text additionalData = new Text(message.getSender() + " at " + message.getDate().getTime());
+            VBox.setMargin(additionalData, new Insets(0, 0, 0, 7));
+            VBox vBox = new VBox(additionalData, stackPane);
+            vBox.setPadding(new Insets(7, 0, 0, 0));
 
 
-        if (addFirst) {//todo fix autoscroll
-            messagesPane.getChildren().addFirst(vBox);
+            if (addFirst) {//todo fix autoscroll
+                messagesPane.getChildren().addFirst(vBox);
+            } else messagesPane.getChildren().add(vBox);
         }
-        else messagesPane.getChildren().add(vBox);
+        else {
+            Text text = new Text("Beginning of the chat");
+            text.setFont(new Font(20));
+            text.setFill(Color.rgb(97, 97, 97));
+
+            Line line1 = new Line(0, 0, 200, 0);
+            line1.setStroke(Color.rgb(205, 205, 205));
+            line1.setStrokeWidth(2);
+            Line line2 = new Line(0, 0, 200, 0);
+            line2.setStroke(Color.rgb(205, 205, 205));
+            line2.setStrokeWidth(2);
+            BorderPane.setAlignment(line1, Pos.CENTER);
+            BorderPane.setAlignment(line2, Pos.CENTER);
+            BorderPane.setMargin(text, new Insets(0, 7, 0, 7));
+
+            double textWidth = text.getLayoutBounds().getWidth()+14;
+            BorderPane borderPane = new BorderPane();
+            line1.endXProperty().bind(borderPane.widthProperty().subtract(textWidth).divide(2));
+            line2.endXProperty().bind(borderPane.widthProperty().subtract(textWidth).divide(2));
+
+            borderPane.setCenter(text);
+            borderPane.setLeft(line1);
+            borderPane.setRight(line2);
+            borderPane.minWidthProperty().bind(mainPane.widthProperty().subtract(270));
+            messagesPane.getChildren().addFirst(borderPane);
+        }
     }
 
     public void printErrorMessage(String message) {
@@ -270,7 +327,6 @@ public class MainSceneController implements Initializable {
         scrollPane.vvalueProperty().addListener((obs, oldVal, newVal) -> {
             if (Main.selectedChatId != -1 && scrollPane.getVvalue() == 0 && Main.messenger.getChats().get(Main.selectedChatId)
                     .getMessages().getFirst().getMessageId() != 0) {
-                System.out.println(123);
                 Cursor<Message> cursor = Main.messenger.getChats().get(Main.selectedChatId).getMessages().getFirstCursor();
                 cursor.previous();
                 try {

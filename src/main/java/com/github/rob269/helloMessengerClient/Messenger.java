@@ -62,52 +62,105 @@ public class Messenger {
         String[] timeString = dateParts[1].split(":");
         return new GregorianCalendar(Integer.parseInt(dateString[0]),
                 Integer.parseInt(dateString[1])-1, Integer.parseInt(dateString[2]),
-                Integer.parseInt(timeString[0]), Integer.parseInt(timeString[1]), Integer.parseInt(timeString[2]));
+                Integer.parseInt(timeString[0]), Integer.parseInt(timeString[1]), (timeString.length == 3 ? Integer.parseInt(timeString[2]) : 0));
     }
 
-    public Chat addContact(String username) throws IOException {
-        LOGGER.fine("Adding new contact");
-        if (username.contains("\\")) {
-            LOGGER.fine("Username contains forbidden symbols");
-            return null;
-        }
-        if (username.equals(Client.getUsername()) || username.isEmpty()) {
-            LOGGER.fine("This contact cannot be added");
-            return null;
-        }
-        HMPBatch batch = serverIO.writeBatch(81, 1, false);
-        batch.write(username);
-        byte response = serverIO.readCommand();
-        switch (response) {
-            case 54 -> {
-                long chatId = serverIO.readLong();
-                Chat chat = new Chat(chatId, username, Chat.Status.OK, null, true);
-                chats.put(chat.getChatId(), chat);
-                return chat;
+    public Chat addContact(String username) {
+        try {
+            LOGGER.fine("Adding new contact");
+            if (username.contains("\\")) {
+                LOGGER.fine("Username contains forbidden symbols");
+                Main.controller.printMenuErrorMessage("Username contains forbidden symbols");
+                return null;
             }
-            case 62 -> LOGGER.fine("Contact already exist");
-            case 64 -> LOGGER.fine("User doesn't exist");
+            if (username.equals(Client.getUsername())) {
+                LOGGER.fine("This contact cannot be added");
+                Main.controller.printMenuErrorMessage("This contact cannot be added");
+                return null;
+            }
+            for (long chatId : chatIds) {
+                Chat chat = chats.get(chatId);
+                if (chat.isPrivate() && chat.getName().equals(username)) {
+                    LOGGER.fine("Contact already exist");
+                    Main.controller.printMenuErrorMessage("Contact already exist");
+                    return null;
+                }
+            }
+            HMPBatch batch = serverIO.writeBatch(81, 1, false);
+            batch.write(username);
+            byte response = serverIO.readCommand();
+            switch (response) {
+                case 54 -> {
+                    String[] chatId = serverIO.readString().split("\\\\\\\\");
+                    System.out.println(chatId[1]);
+                    Chat chat = new Chat(Long.parseLong(chatId[0]), username, Chat.Status.OK,
+                            new Message(0, "null", getDate(chatId[1].replace("T", " ")), ""), true);
+                    chats.put(chat.getChatId(), chat);
+                    return chat;
+                }
+                case 64 -> {
+                    LOGGER.fine("User doesn't exist");
+                    Main.controller.printMenuErrorMessage("User doesn't exist");
+                }
+            }
+        } catch (IOException _) {
+            Main.controller.printErrorMessage("Disconnected from the server");
         }
         return null;
     }
 
-    public Chat createChat(String chatName) throws IOException{
-        LOGGER.fine("Adding new chat");
-        if (chatName.contains("\\")) {
-            LOGGER.fine("Chat name contains forbidden symbols");
-            return null;
+    public Chat createChat(String chatName) {
+        try {
+            LOGGER.fine("Adding new chat");
+            if (chatName.contains("\\")) {
+                LOGGER.fine("Chat name contains forbidden symbols");
+                Main.controller.printMenuErrorMessage("Chat name contains forbidden symbols");
+                return null;
+            }
+            HMPBatch batch = serverIO.writeBatch(82, 1, false);
+            batch.write(chatName);
+            byte response = serverIO.readCommand();
+            if (response == 54) {
+                String[] strChat = serverIO.readString().split("\\\\\\\\");
+                Chat chat = new Chat(Long.parseLong(strChat[0]), chatName, Chat.Status.OK,
+                        new Message(0, "null", getDate(strChat[1].replace("T", " ")), ""), false);
+                chats.put(chat.getChatId(), chat);
+                return chat;
+            }
+        } catch (IOException _) {
+            Main.controller.printErrorMessage("Disconnected from the server");
         }
-        if (chatName.isEmpty()) {
-            LOGGER.fine("You cannot create a chat with that name");
-        }
-        HMPBatch batch = serverIO.writeBatch(82, 1, false);
-        batch.write(chatName);
-        byte response = serverIO.readCommand();
-        if (response == 54) {
-            long chatId = serverIO.readLong();
-            Chat chat = new Chat(chatId, chatName, Chat.Status.OK, null, false);
-            chats.put(chat.getChatId(), chat);
-            return chat;
+        return null;
+    }
+
+    public Chat connectToTheChat(long chatId) {
+        try {
+            for (long id : chatIds) {
+                if (chats.get(id).getChatId() == chatId) {
+                    LOGGER.fine("Chat already exist");
+                    Main.controller.printMenuErrorMessage("Chat already exist");
+                    return null;
+                }
+            }
+            HMPBatch batch = serverIO.writeBatch(86, 1, false);
+            batch.write(chatId);
+            byte response = serverIO.readCommand();
+            switch (response) {
+                case 57 -> {
+                    String[] strChat = serverIO.readString().split("\\\\\\\\");
+                    Chat chat = new Chat(chatId, strChat[0], Chat.Status.OK, new Message(Long.parseLong(strChat[1]),
+                            strChat[2], getDate(strChat[3]), strChat[4].replaceAll("\\\\&", "\\\\")), false);
+                    chats.put(chatId, chat);
+                    return chat;
+                }
+                case 67 -> {
+                    LOGGER.fine("Chat does not exist");
+                    Main.controller.printMenuErrorMessage("Chat does not exist");
+                    return null;
+                }
+            }
+        } catch (IOException _) {
+            Main.controller.printErrorMessage("Disconnected from the server");
         }
         return null;
     }
@@ -122,6 +175,7 @@ public class Messenger {
                 case 55 -> {
                     String[] meta = serverIO.readString().split("\\\\\\\\");
                     Message sentMessage = new Message(Long.parseLong(meta[0]), Client.getUsername(), getDate(meta[1].replace("T", " ")), message);
+                    chats.get(chatId).getMessages().add(sentMessage);
                     LOGGER.fine("Message is sent");
                     return sentMessage;
                 }
@@ -172,10 +226,20 @@ public class Messenger {
     public long getNewMessage() throws IOException {
         String[] strMessage = serverIO.readString().split("\\\\\\\\");
         Message message = new Message(Long.parseLong(strMessage[1]), strMessage[2],
-                Messenger.getDate(strMessage[3].replace("T", " ")), strMessage[4]);
+                getDate(strMessage[3].replace("T", " ")), strMessage[4].replaceAll("\\\\&", "\\\\"));
         long chatId = Long.parseLong(strMessage[0]);
         chats.get(chatId).addMessage(message);
         return chatId;
+    }
+
+    public Chat getNewChat() throws IOException {
+        String[] strChat = serverIO.readString().split("\\\\\\\\");
+        Chat chat = new Chat(Long.parseLong(strChat[0]), strChat[1], Chat.Status.NEW,
+                new Message(Long.parseLong(strChat[2]), strChat[3], getDate(strChat[4].replace("T", " ")),
+                        strChat[5].replaceAll("\\\\&", "\\\\")), strChat[6].equals("1"));
+        chats.put(chat.getChatId(), chat);
+        chatIds.add(chat.getChatId());
+        return chat;
     }
 
     public void close() throws IOException {

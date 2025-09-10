@@ -19,9 +19,13 @@ public class SideConnectionThread extends Thread {
                 switch (command) {
                     case -10 -> {
                         long chatId = messenger.getNewMessage();
-                        if (Main.selectedChatId == chatId) {
-                            Platform.runLater(() -> {Main.controller.addReceivedMessage();});
-                        }
+                        Platform.runLater(() -> {
+                            if (Main.selectedChatId == chatId) Main.controller.addReceivedMessage();
+                        });
+                    }
+                    case -11 -> {
+                        Chat chat = messenger.getNewChat();
+                        Platform.runLater(() -> {Main.controller.addChat(chat);});
                     }
                 }
             }

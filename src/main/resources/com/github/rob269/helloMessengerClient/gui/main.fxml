@@ -103,15 +103,15 @@
       <StackPane fx:id="menuPane" prefHeight="150.0" prefWidth="200.0" visible="false" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
          <children>
             <Rectangle fx:id="rectangle3" fill="#c2c2c255" height="600.0" stroke="BLACK" strokeType="INSIDE" strokeWidth="0.0" width="800.0" />
-            <Rectangle arcHeight="30.0" arcWidth="30.0" fill="WHITE" height="217.0" stroke="BLACK" strokeType="INSIDE" strokeWidth="0.0" width="284.0" />
-            <VBox alignment="TOP_CENTER" maxHeight="200.0" maxWidth="200.0" prefHeight="200.0" prefWidth="200.0">
+            <Rectangle arcHeight="30.0" arcWidth="30.0" fill="WHITE" height="220.0" stroke="BLACK" strokeType="INSIDE" strokeWidth="0.0" width="285.0" />
+            <VBox alignment="TOP_CENTER" maxHeight="200.0" maxWidth="270.0" prefHeight="200.0" prefWidth="750.0">
                <children>
                   <Text fx:id="menuText" strokeType="OUTSIDE" strokeWidth="0.0" text="Text">
                      <font>
                         <Font size="20.0" />
                      </font>
                   </Text>
-                  <TextField fx:id="menuTextField" onKeyPressed="#onMenuEnterKey" prefHeight="64.0" prefWidth="474.0">
+                  <TextField fx:id="menuTextField" maxWidth="220.0" onKeyPressed="#onMenuEnterKey" prefHeight="64.0" prefWidth="220.0">
                      <font>
                         <Font size="20.0" />
                      </font>
