@@ -37,6 +37,7 @@ public class ServerIO implements Closeable {
         commands.put((byte) 54, "Chat was created");
         commands.put((byte) 55, "Message is successfully sent");
         commands.put((byte) 56, "Sending messages from database");
+        commands.put((byte) 57, "You joined the chat");
         commands.put((byte) 60, "Error");
         commands.put((byte) 61, "Authentication error");
         commands.put((byte) 62, "Chat already exist");
@@ -49,6 +50,7 @@ public class ServerIO implements Closeable {
         commands.put((byte) 69, "Chat is blocked");
         commands.put((byte) 70, "User blocked in this chat");
         commands.put((byte) 71, "Wrong params");
+        commands.put((byte) 72, "User already in the chat");
         commands.put((byte) 80, "Get chats");
         commands.put((byte) 81, "Create new private chat");
         commands.put((byte) 82, "Create new public chat");
