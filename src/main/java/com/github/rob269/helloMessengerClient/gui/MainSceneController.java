@@ -174,7 +174,7 @@ public class MainSceneController implements Initializable {
         String message = Main.serverConnect();
         if (message.equals("OK")) {
             hideErrorMessage();
-            addMessagesToPane(Main.selectedChatId);
+            if (Main.selectedChatId != -1) addMessagesToPane(Main.selectedChatId);
             Main.initChats();
         }
         else {
