@@ -2,12 +2,14 @@ package com.github.rob269.helloMessengerClient;
 
 import com.github.rob269.helloMessengerClient.gui.LoginSceneController;
 import com.github.rob269.helloMessengerClient.gui.MainSceneController;
+import com.github.rob269.helloMessengerClient.gui.ServerIpInputSceneController;
 import com.github.rob269.helloMessengerClient.io.ResourcesIO;
 import com.github.rob269.helloMessengerClient.io.ServerIO;
 import com.github.rob269.helloMessengerClient.rsa.Guarantor;
 import com.github.rob269.helloMessengerClient.rsa.Key;
 import com.github.rob269.helloMessengerClient.io.WrongKeyException;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -19,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.net.Socket;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -40,10 +43,15 @@ public class Main extends Application {
     }
     private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
     public static Stage stage;
-    private static String serverIp = "127.0.0.1";
-    public static Messenger messenger = null;
+    private static String serverIp = "";
+    public volatile static Messenger messenger = null;
     public static MainSceneController controller;
     public static long selectedChatId = -1;
+    public static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    public static void setServerIp(String ip) {
+        if (serverIp.isEmpty()) serverIp = ip;
+    }
 
     public static void main(String[] args) {
         for (int i = 0; i < args.length; i++) {
@@ -65,19 +73,24 @@ public class Main extends Application {
                 }
             }
         }
-        parseConfigFile();
+        parseConfigFile("resources/config");
         launch();
     }
 
     @Override
     public void start(Stage stage) throws Exception {
+        Thread.currentThread().setName("MainConnectionThread");
         stage.setTitle("Hello Messenger");
         stage.getIcons().add(new Image(Objects.requireNonNull(Main.class.getResource("icon.png")).openStream()));
         stage.setMinHeight(400);
         stage.setMinWidth(600);
         FXMLLoader fxmlLoader;
         Parent root;
-        if (!Client.isLogin()) {
+        if (serverIp.isEmpty()) {
+            fxmlLoader = new FXMLLoader(ServerIpInputSceneController.class.getResource("ipInput.fxml"));
+            root = fxmlLoader.load();
+        }
+        else if (!Client.isLogin()) {
             fxmlLoader = new FXMLLoader(LoginSceneController.class.getResource("login.fxml"));
             root = fxmlLoader.load();
         }
@@ -85,15 +98,6 @@ public class Main extends Application {
             fxmlLoader = new FXMLLoader(MainSceneController.class.getResource("main.fxml"));
             root = fxmlLoader.load();
             controller = fxmlLoader.getController();
-            String message = "Error";
-            try {
-                message = serverConnect();
-            } catch (Exception _) {
-            }
-            if (!message.equals("OK")) {
-                controller.printErrorMessage(message);
-            }
-            else initChats();
         }
         stage.setOnCloseRequest((WindowEvent event) -> {
             if (messenger != null) {
@@ -109,6 +113,20 @@ public class Main extends Application {
         stage.setScene(scene);
         Main.stage = stage;
         stage.show();
+        new Thread(() -> {
+            if (Client.isLogin()) {
+                String message = serverConnect();
+                if (!message.equals("OK")) {
+                    Platform.runLater(() -> controller.printErrorMessage(message));
+                }
+                else {
+                    Platform.runLater(() -> {
+                        controller.hideErrorMessage();
+                        initChats();
+                    });
+                }
+            }
+        }).start();
     }
 
     public static void initChats() {
@@ -118,15 +136,16 @@ public class Main extends Application {
         for (Long id : ids) controller.addChat(map.get(id));
     }
 
-    private static void parseConfigFile() {
+    private static void parseConfigFile(String file) {
         try {
-            if (!ResourcesIO.isExist("config")) {
-                ResourcesIO.write("config", new ArrayList<>());
+            if (!ResourcesIO.isExist(file)) {
+                ResourcesIO.write(file, new ArrayList<>());
                 throw new RuntimeException();
             }
             BigInteger[] publicKey = null;
             StringBuilder builder = new StringBuilder();
-            for (String line : ResourcesIO.read("config")) builder.append(line);
+            List<String> lines = ResourcesIO.read(file);
+            for (String line : lines) builder.append(line);
             String[] configs = builder.toString().replaceAll(" ", "").split(";");
             for (String config : configs) {
                 if (config.startsWith("guarantor_public_key")) {
@@ -141,22 +160,33 @@ public class Main extends Application {
             } else {
                 throw new RuntimeException();
             }
+            if (!file.equals("resources/config")) {
+                ResourcesIO.write("resources/config", lines);
+            }
         } catch (RuntimeException e) {
-            LOGGER.severe("The configuration file does not contain the necessary data");
-            throw e;
+            if (!file.equals("defConfig")) {
+                LOGGER.warning("The configuration file doesn't contain the necessary data");
+                parseConfigFile("defConfig");
+            }
+            else {
+                LOGGER.severe("Default configuration file doesn't exist");
+                throw new RuntimeException();
+            }
         }
     }
 
-    private static int connectTryCount = 0;
-    public static String serverConnect() {
+    public synchronized static String serverConnect() {
         String message = "";
+        int connectTryCount = 0;
         do {
             try {
+                Thread.currentThread().setName("MainConnectionThread");
+                if (connectTryCount == 0) LOGGER.warning("Attempt to connect to the server");
+                else LOGGER.warning("Repeated attempt to connect to the server");
                 connectTryCount++;
                 Client.initKeys();
                 ServerIO serverIO = null;
                 try {
-                    Thread.currentThread().setName("MainConnectionThread");
                     Socket serverSocket = new Socket(serverIp, 5099);
                     serverIO = new ServerIO(serverSocket);
                     serverSocket.setSoTimeout(3_000);
@@ -189,7 +219,8 @@ public class Main extends Application {
                     message = "Authentication error";
                 }
                 break;
-            } catch (Exception _) {
+            } catch (Exception e) {
+                LOGGER.warning("Exception when connecting to the server" + LogFormatter.formatStackTrace(e));
             }
         } while (connectTryCount < 2);
         return message;

@@ -16,9 +16,9 @@ public class Client {
 
     public static void initKeys() {
         if (userKeys == null) {
-            if (ResourcesIO.isExist("RSA/userKeys.json")) {
+            if (ResourcesIO.isExist("resources/RSA/userKeys.json")) {
                 try {
-                    RSAKeysPair userKeys = ResourcesIO.readJSON("RSA/userKeys.json", RSAKeysPair.class);
+                    RSAKeysPair userKeys = ResourcesIO.readJSON("resources/RSA/userKeys.json", RSAKeysPair.class);
                     if (userKeys == null) {
                         throw new NullPointerException();
                     }
@@ -47,7 +47,7 @@ public class Client {
     private static void generateNewKeys() {
         BigInteger[][] keys = RSA.generateKeys();
         Client.userKeys = new RSAKeysPair(keys);
-        ResourcesIO.writeJSON("RSA/userKeys"+ResourcesIO.EXTENSION, userKeys);
+        ResourcesIO.writeJSON("resources/RSA/userKeys"+ResourcesIO.EXTENSION, userKeys);
         LOGGER.fine("The keys were generated and written to the file");
     }
 

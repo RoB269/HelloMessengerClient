@@ -78,6 +78,15 @@
             <VBox fx:id="messagesPane" alignment="BOTTOM_LEFT" prefHeight="440.0" prefWidth="337.0" />
          </content>
       </ScrollPane>
+      <Button layoutX="751.0" layoutY="12.0" mnemonicParsing="false" onAction="#onChatSettingsButton" styleClass="icon-button">
+         <graphic>
+            <ImageView fitHeight="56.0" fitWidth="18.0" pickOnBounds="true" preserveRatio="true">
+               <image>
+                  <Image url="@../../../../../settingsButton18x56.png" />
+               </image>
+            </ImageView>
+         </graphic>
+      </Button>
       <StackPane fx:id="errorMessagePane" prefHeight="150.0" prefWidth="200.0" visible="false" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="270.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
          <children>
             <Rectangle fx:id="rectangle2" fill="#c2c2c266" height="600.0" stroke="BLACK" strokeType="INSIDE" strokeWidth="0.0" width="530.0" />

@@ -265,7 +265,7 @@ public class ServerIO implements Closeable {
         return toReturn;
     }
 
-    protected synchronized void write(byte[] message, boolean sendCommand) throws IOException{
+    synchronized void write(byte[] message, boolean sendCommand) throws IOException{
         if (!isClosed) {
             LOGGER.finest("Sending byte message");
             try {

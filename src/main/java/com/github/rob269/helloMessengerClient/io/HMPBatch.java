@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.util.logging.Logger;
 
-public class HMPBatch {
+public class HMPBatch {//todo Add writePackage(Objet... values) -> write(val1 + "\\\\" + val2 + "\\\\" + ... + valn + "\\\\;")
     private static final Logger LOGGER = Logger.getLogger(HMPBatch.class.getName());
     private final byte command;
     private final ServerIO clientIO;

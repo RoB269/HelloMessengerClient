@@ -12,12 +12,11 @@ import java.util.logging.Logger;
 
 public class ResourcesIO {
     private static final Logger LOGGER = Logger.getLogger(Thread.currentThread().getName() + ":" + ResourcesIO.class.getName());
-    public static final String ROOT_FOLDER = "resources/";
     public static final String EXTENSION = ".json";
 
     public static List<String> read(String filePath) {
         List<String> lines = new ArrayList<>();
-        File file = new File(ROOT_FOLDER + filePath);
+        File file = new File(filePath);
         if (file.exists()) {
             try {
                 BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8));
@@ -37,8 +36,7 @@ public class ResourcesIO {
     }
 
     public synchronized static void write(String filePath, List<String> lines, boolean append) {
-        File file = new File(ROOT_FOLDER + filePath);
-        LOGGER.severe(file.getParentFile().getAbsolutePath());
+        File file = new File(filePath);
         if (!file.getParentFile().exists()) {
             file.getParentFile().mkdirs();
         }
@@ -64,22 +62,22 @@ public class ResourcesIO {
     }
 
     public synchronized static void delete(String filePath) {
-        File file = new File(ROOT_FOLDER+filePath);
+        File file = new File(filePath);
         if (file.exists()){
             file.delete();
         }
     }
 
     public static boolean isExist(String filePath) {
-        return new File(ROOT_FOLDER + filePath).exists();
+        return new File(filePath).exists();
     }
 
     public synchronized static void writeObject(Object object, String path) {
-        File file = new File(ROOT_FOLDER + path);
+        File file = new File(path);
         if (!file.getParentFile().exists()) {
             file.getParentFile().mkdirs();
         }
-        try (FileOutputStream fos = new FileOutputStream(ROOT_FOLDER+path);
+        try (FileOutputStream fos = new FileOutputStream(path);
              ObjectOutputStream oos = new ObjectOutputStream(fos)){
             oos.writeObject(object);
         } catch (IOException e) {
@@ -88,8 +86,8 @@ public class ResourcesIO {
     }
 
     public static Object readObject(String path) {
-        if (new File(ROOT_FOLDER+path).exists()) {
-            try (FileInputStream fis = new FileInputStream(ROOT_FOLDER + path);
+        if (new File(path).exists()) {
+            try (FileInputStream fis = new FileInputStream(path);
                  ObjectInputStream ois = new ObjectInputStream(fis)) {
                 return ois.readObject();
             } catch (IOException e) {
@@ -102,7 +100,7 @@ public class ResourcesIO {
     }
 
     public synchronized static void writeJSON(String filePath, Object object) {
-        File file = new File(ROOT_FOLDER + filePath);
+        File file = new File(filePath);
         if (!file.getParentFile().exists()) {
             file.getParentFile().mkdirs();
         }
@@ -110,7 +108,7 @@ public class ResourcesIO {
             try {
                 file.createNewFile();
             } catch (IOException e) {
-                LOGGER.warning("Can't create new file (" + ROOT_FOLDER + filePath + ") " + e);
+                LOGGER.warning("Can't create new file (" + filePath + ") " + e);
             }
         }
         try {
@@ -123,18 +121,18 @@ public class ResourcesIO {
             bufferedWriter.flush();
             bufferedWriter.close();
         } catch (IOException e) {
-            LOGGER.warning("Can't write to file (" + ROOT_FOLDER + filePath + ") " + e);
+            LOGGER.warning("Can't write to file (" + filePath + ") " + e);
         }
     }
 
     public static <T> T readJSON(String filePath, Class<T> classOfT) {
-        File file = new File(ROOT_FOLDER + filePath);
+        File file = new File(filePath);
         if (file.exists()) {
             try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))){
                 Gson gson = new Gson();
                 return gson.fromJson(bufferedReader, classOfT);
             } catch (IOException e) {
-                LOGGER.warning("Can't read the file (" + ROOT_FOLDER + filePath + ") " + e);
+                LOGGER.warning("Can't read the file (" + filePath + ") " + e);
             }
         }
         return null;

@@ -4,6 +4,9 @@ import com.github.rob269.helloMessengerClient.io.HMPBatch;
 import com.github.rob269.helloMessengerClient.io.ServerIO;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -56,13 +59,9 @@ public class Messenger {
         return formated;
     }
 
-    public static GregorianCalendar getDate(String stringDate) {
-        String[] dateParts = stringDate.split(" ");
-        String[] dateString = dateParts[0].split("-");
-        String[] timeString = dateParts[1].split(":");
-        return new GregorianCalendar(Integer.parseInt(dateString[0]),
-                Integer.parseInt(dateString[1])-1, Integer.parseInt(dateString[2]),
-                Integer.parseInt(timeString[0]), Integer.parseInt(timeString[1]), (timeString.length == 3 ? Integer.parseInt(timeString[2]) : 0));
+    public static LocalDateTime getDate(String stringDate) {
+        ZonedDateTime zonedDateTime = LocalDateTime.parse(stringDate, Main.dateTimeFormatter).atZone(ZoneId.of("UTC")).withZoneSameInstant(ZoneId.systemDefault());
+        return zonedDateTime.toLocalDateTime();
     }
 
     public Chat addContact(String username) {
@@ -94,7 +93,7 @@ public class Messenger {
                     String[] chatId = serverIO.readString().split("\\\\\\\\");
                     System.out.println(chatId[1]);
                     Chat chat = new Chat(Long.parseLong(chatId[0]), username, Chat.Status.OK,
-                            new Message(0, "null", getDate(chatId[1].replace("T", " ")), ""), true);
+                            new Message(0, "null", getDate(chatId[1]), ""), true);
                     chats.put(chat.getChatId(), chat);
                     return chat;
                 }
@@ -123,7 +122,7 @@ public class Messenger {
             if (response == 54) {
                 String[] strChat = serverIO.readString().split("\\\\\\\\");
                 Chat chat = new Chat(Long.parseLong(strChat[0]), chatName, Chat.Status.OK,
-                        new Message(0, "null", getDate(strChat[1].replace("T", " ")), ""), false);
+                        new Message(0, "null", getDate(strChat[1]), ""), false);
                 chats.put(chat.getChatId(), chat);
                 return chat;
             }
@@ -173,8 +172,8 @@ public class Messenger {
             byte response = serverIO.readCommand();
             switch (response) {
                 case 55 -> {
-                    String[] meta = serverIO.readString().split("\\\\\\\\");
-                    Message sentMessage = new Message(Long.parseLong(meta[0]), Client.getUsername(), getDate(meta[1].replace("T", " ")), message);
+                    String[] meta = serverIO.readString(false).split("\\\\\\\\");
+                    Message sentMessage = new Message(Long.parseLong(meta[0]), Client.getUsername(), getDate(meta[1]), message);
                     chats.get(chatId).getMessages().add(sentMessage);
                     LOGGER.fine("Message is sent");
                     return sentMessage;
@@ -204,7 +203,7 @@ public class Messenger {
         if (chats.get(chatId).getMessages().isEmpty()) return;
         HMPBatch batch = serverIO.writeBatch(84, 2, false);
         batch.write(chatId);
-        batch.write(chats.get(chatId).getMessages().getFirst().getMessageId() + "\\" + MESSAGE_PACK_SIZE);
+        batch.write(chats.get(chatId).getMessages().getFirst().getMessageId() + "\\\\" + MESSAGE_PACK_SIZE + "\\\\;");
         byte response = serverIO.readCommand();
         if (response == 56) {
             String[] messages = serverIO.readString().split("\\\\\\\\");

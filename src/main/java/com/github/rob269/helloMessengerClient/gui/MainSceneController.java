@@ -3,7 +3,9 @@ package com.github.rob269.helloMessengerClient.gui;
 import com.github.rob269.helloMessengerClient.*;
 import com.github.rob269.helloMessengerClient.util.Cursor;
 import com.github.rob269.helloMessengerClient.util.LinkedList;
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
@@ -11,6 +13,7 @@ import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
@@ -23,6 +26,7 @@ import javafx.scene.text.Text;
 
 import java.io.IOException;
 import java.net.URL;
+import java.time.LocalDateTime;
 import java.util.ResourceBundle;
 
 public class MainSceneController implements Initializable {
@@ -169,16 +173,27 @@ public class MainSceneController implements Initializable {
         if (event.getCode() == KeyCode.ENTER) sendMessage();
     }
 
+    private volatile boolean isDone = true;
     @FXML
     void onReconnectButton(ActionEvent event) {
-        String message = Main.serverConnect();
-        if (message.equals("OK")) {
-            hideErrorMessage();
-            if (Main.selectedChatId != -1) addMessagesToPane(Main.selectedChatId);
-            Main.initChats();
-        }
-        else {
-            printErrorMessage(message + "\nReconnection failed");
+        synchronized (this) {
+            if (isDone) {
+                isDone = false;
+                printErrorMessage("Trying to reconnect");
+                new Thread(() -> {
+                    String message = Main.serverConnect();
+                    if (message.equals("OK")) {
+                        Platform.runLater(() -> {
+                            hideErrorMessage();
+                            Main.initChats();
+                        });
+                        if (Main.selectedChatId != -1) Platform.runLater(() -> addMessagesToPane(Main.selectedChatId));
+                    } else {
+                        Platform.runLater(() -> printErrorMessage(message + "\nReconnection failed"));
+                    }
+                    isDone = true;
+                }).start();
+            }
         }
     }
 
@@ -187,8 +202,13 @@ public class MainSceneController implements Initializable {
         sendMessage();
     }
 
+    @FXML
+    void onChatSettingsButton() {
+        addMessage(new Message(42, "Hello", LocalDateTime.now(), "Test"), true);
+    }
+
     private void sendMessage() {
-        if (!enterTextField.getText().isEmpty() && Main.selectedChatId != -1) {
+        if (!enterTextField.getText().isEmpty() && Main.selectedChatId != -1) {//todo Сделать отправку сообщения ассинхронной
             Message message = Main.messenger.sendMessage(enterTextField.getText(), Main.selectedChatId);
             if (message != null) {
                 needScrollDown = true;
@@ -200,7 +220,7 @@ public class MainSceneController implements Initializable {
 
     void onChatButton(ActionEvent event) {
         ChatButton button = (ChatButton) event.getTarget();
-        contactName.setText(button.getText());
+        contactName.setText(button.getText() + (Main.messenger.getChats().get(button.getChatId()).isPrivate() ? "" : "[" + button.getChatId() + "]"));
         addMessagesToPane(button.getChatId());
         Main.selectedChatId = button.getChatId();
         needScrollDown = true;
@@ -261,7 +281,7 @@ public class MainSceneController implements Initializable {
             stackPane.setAlignment(Pos.CENTER_LEFT);
             VBox.setMargin(stackPane, new Insets(0, 0, 12, 7));
 
-            Text additionalData = new Text(message.getSender() + " at " + message.getDate().getTime());
+            Text additionalData = new Text(message.getSender() + " at " + message.getDate().format(Main.dateTimeFormatter));
             VBox.setMargin(additionalData, new Insets(0, 0, 0, 7));
             VBox vBox = new VBox(additionalData, stackPane);
             vBox.setPadding(new Insets(7, 0, 0, 0));
@@ -325,7 +345,8 @@ public class MainSceneController implements Initializable {
             }
         });
         scrollPane.vvalueProperty().addListener((obs, oldVal, newVal) -> {
-            if (Main.selectedChatId != -1 && scrollPane.getVvalue() == 0 && Main.messenger.getChats().get(Main.selectedChatId)
+            if (Main.selectedChatId == -1) return;
+            if (scrollPane.getVvalue() == 0 && Main.messenger.getChats().get(Main.selectedChatId)
                     .getMessages().getFirst().getMessageId() != 0) {
                 Cursor<Message> cursor = Main.messenger.getChats().get(Main.selectedChatId).getMessages().getFirstCursor();
                 cursor.previous();
