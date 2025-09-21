@@ -12,7 +12,7 @@ import java.util.logging.Logger;
 
 public class ResourcesIO {
     private static final Logger LOGGER = Logger.getLogger(Thread.currentThread().getName() + ":" + ResourcesIO.class.getName());
-    public static final String EXTENSION = ".json";
+    public static final String appdataPath = System.getenv("APPDATA") + "\\Hello Messenger\\";
 
     public static List<String> read(String filePath) {
         List<String> lines = new ArrayList<>();

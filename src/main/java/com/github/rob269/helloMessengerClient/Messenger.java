@@ -32,8 +32,8 @@ public class Messenger {
         serverIO.writeCommand(80);
         byte response = serverIO.readCommand();
         if (response == 53) {
-            String[] privateChats = serverIO.readString(true).split("\\\\\\\\");
-            String[] publicChats = serverIO.readString(true).split("\\\\\\\\");
+            String[] privateChats = serverIO.readString(false).split("\\\\\\\\");
+            String[] publicChats = serverIO.readString(false).split("\\\\\\\\");
             for (Chat chat : formatChats(privateChats, true)) {
                 chats.put(chat.getChatId(), chat);
                 chatIds.add(chat.getChatId());

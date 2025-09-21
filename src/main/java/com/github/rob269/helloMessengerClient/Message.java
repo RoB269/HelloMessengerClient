@@ -1,9 +1,7 @@
 package com.github.rob269.helloMessengerClient;
 
 import java.io.Serializable;
-import java.text.DateFormat;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 public class Message implements Serializable {
     private final long messageId;

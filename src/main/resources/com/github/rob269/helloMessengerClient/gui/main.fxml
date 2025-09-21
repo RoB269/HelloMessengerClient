@@ -78,7 +78,7 @@
             <VBox fx:id="messagesPane" alignment="BOTTOM_LEFT" prefHeight="440.0" prefWidth="337.0" />
          </content>
       </ScrollPane>
-      <Button layoutX="751.0" layoutY="12.0" mnemonicParsing="false" onAction="#onChatSettingsButton" styleClass="icon-button">
+      <Button layoutX="751.0" layoutY="12.0" mnemonicParsing="false" onAction="#onChatSettingsButton" styleClass="icon-button" AnchorPane.rightAnchor="31.0" AnchorPane.topAnchor="12.0">
          <graphic>
             <ImageView fitHeight="56.0" fitWidth="18.0" pickOnBounds="true" preserveRatio="true">
                <image>

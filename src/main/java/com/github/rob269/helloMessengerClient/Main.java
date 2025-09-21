@@ -30,17 +30,6 @@ import java.util.logging.LogManager;
 import java.util.logging.Logger;
 
 public class Main extends Application {
-    static {
-        File logsDir = new File("log/");
-        if (!logsDir.exists()) {
-            logsDir.mkdir();
-        }
-        try {
-            LogManager.getLogManager().readConfiguration(Objects.requireNonNull(Main.class.getResource("log.properties")).openStream());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
     private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
     public static Stage stage;
     private static String serverIp = "";
@@ -54,6 +43,16 @@ public class Main extends Application {
     }
 
     public static void main(String[] args) {
+        File logsDir = new File(ResourcesIO.appdataPath + "logs\\");
+        if (!logsDir.exists()) {
+            logsDir.mkdirs();
+        }
+        try {
+            LogManager.getLogManager().readConfiguration(Objects.requireNonNull(Main.class.getResource("log.properties")).openStream());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
         for (int i = 0; i < args.length; i++) {
             if (args[i].equals("-login")) {
                 if (i+2<args.length) {
@@ -73,7 +72,7 @@ public class Main extends Application {
                 }
             }
         }
-        parseConfigFile("resources/config");
+        parseConfigFile(ResourcesIO.appdataPath + "config");
         launch();
     }
 
@@ -160,8 +159,8 @@ public class Main extends Application {
             } else {
                 throw new RuntimeException();
             }
-            if (!file.equals("resources/config")) {
-                ResourcesIO.write("resources/config", lines);
+            if (!file.equals(ResourcesIO.appdataPath + "config")) {
+                ResourcesIO.write(ResourcesIO.appdataPath + "config", lines);
             }
         } catch (RuntimeException e) {
             if (!file.equals("defConfig")) {

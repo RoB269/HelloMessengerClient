@@ -180,7 +180,7 @@ public class MainSceneController implements Initializable {
             if (isDone) {
                 isDone = false;
                 printErrorMessage("Trying to reconnect");
-                new Thread(() -> {
+                new Thread(() -> {//todo replace with ExecutorService
                     String message = Main.serverConnect();
                     if (message.equals("OK")) {
                         Platform.runLater(() -> {
@@ -204,11 +204,11 @@ public class MainSceneController implements Initializable {
 
     @FXML
     void onChatSettingsButton() {
-        addMessage(new Message(42, "Hello", LocalDateTime.now(), "Test"), true);
+
     }
 
     private void sendMessage() {
-        if (!enterTextField.getText().isEmpty() && Main.selectedChatId != -1) {//todo Сделать отправку сообщения ассинхронной
+        if (!enterTextField.getText().isEmpty() && Main.selectedChatId != -1) {//todo Сделать отправку сообщения ассинхронной ExecutorService
             Message message = Main.messenger.sendMessage(enterTextField.getText(), Main.selectedChatId);
             if (message != null) {
                 needScrollDown = true;

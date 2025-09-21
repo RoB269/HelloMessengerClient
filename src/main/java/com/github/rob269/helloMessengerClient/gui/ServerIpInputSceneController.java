@@ -29,7 +29,7 @@ public class ServerIpInputSceneController {
             Scene scene = new Scene(root);
             scene.getStylesheets().add(Objects.requireNonNull(MainSceneController.class.getResource("style.css")).toExternalForm());
             Main.stage.setScene(scene);
-            ResourcesIO.write("resources/config", List.of("\nserver_ip = " + input + ";"), true);
+            ResourcesIO.write(ResourcesIO.appdataPath + "config", List.of("\nserver_ip = " + input + ";"), true);
         }
     }
 }
