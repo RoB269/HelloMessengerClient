@@ -4,16 +4,16 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.util.logging.Logger;
 
-public class HMPBatch {//todo Add writePackage(Objet... values) -> write(val1 + "\\\\" + val2 + "\\\\" + ... + valn + "\\\\;")
+public class HMPBatch implements Batch {//todo Add writePackage(Objet... values) -> write(val1 + "\\\\" + val2 + "\\\\" + ... + valn + "\\\\;")
     private static final Logger LOGGER = Logger.getLogger(HMPBatch.class.getName());
     private final byte command;
-    private final ServerIO clientIO;
+    private final HMPServerIO clientIO;
     private final int maxSize;
     private int size = 0;
     private final byte[][] batch;
     private String[] logs = null;
 
-    public HMPBatch(byte command, ServerIO clientIO, int size, boolean log) {
+    public HMPBatch(byte command, HMPServerIO clientIO, int size, boolean log) {
         this.command = command;
         this.clientIO = clientIO;
         this.maxSize = size;
@@ -21,6 +21,7 @@ public class HMPBatch {//todo Add writePackage(Objet... values) -> write(val1 + 
         if (log) logs = new String[size];
     }
 
+    @Override
     public void write(long message) throws IOException {
         if (!clientIO.isClosed()) {
             if (logs != null) logs[size] = "Write long:\n" + message;
@@ -40,6 +41,7 @@ public class HMPBatch {//todo Add writePackage(Objet... values) -> write(val1 + 
         return toReturn;
     }
 
+    @Override
     public void write(String message) throws IOException {
         if (!clientIO.isClosed()){
             if (logs != null) logs[size] = "Write string:\n" + message;
@@ -47,6 +49,7 @@ public class HMPBatch {//todo Add writePackage(Objet... values) -> write(val1 + 
         }
     }
 
+    @Override
     public void write(BigInteger message) throws IOException {
         if (!clientIO.isClosed()) {
             if (logs != null) logs[size] = "Write bigint:\n" + message;
@@ -54,7 +57,8 @@ public class HMPBatch {//todo Add writePackage(Objet... values) -> write(val1 + 
         }
     }
 
-    public void write(byte[] message) throws IOException{
+    @Override
+    public void write(byte[] message) throws IOException {
         batch[size] = message;
         size++;
         if (size == maxSize) {

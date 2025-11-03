@@ -20,7 +20,7 @@ public class SideConnectionThread extends Thread {
                     case -10 -> {
                         long chatId = messenger.getNewMessage();
                         Platform.runLater(() -> {
-                            if (Main.selectedChatId == chatId) Main.controller.addReceivedMessage();
+                            Main.controller.handleReceivedMessage(chatId);
                         });
                     }
                     case -11 -> {

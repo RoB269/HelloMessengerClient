@@ -1,8 +1,6 @@
 package com.github.rob269.helloMessengerClient.io;
 
 import com.github.rob269.helloMessengerClient.Client;
-import com.github.rob269.helloMessengerClient.LogFormatter;
-import com.github.rob269.helloMessengerClient.Main;
 import com.github.rob269.helloMessengerClient.rsa.RSA;
 
 import java.io.DataInputStream;
@@ -15,9 +13,9 @@ public class InputRouter extends Thread {
     private final DataInputStream dis;
     public final Deque<byte[]> mainThreadInput = new ArrayDeque<>();
     public final Deque<byte[]> sideThreadInput = new ArrayDeque<>();
-    private final ServerIO serverIO;
+    private final HMPServerIO serverIO;
 
-    public InputRouter(DataInputStream dis, ServerIO serverIO) {
+    public InputRouter(DataInputStream dis, HMPServerIO serverIO) {
         this.dis = dis;
         this.serverIO = serverIO;
     }
@@ -57,7 +55,6 @@ public class InputRouter extends Thread {
             }
         } catch (IOException _) {
             serverIO.close();
-            Main.controller.printErrorMessage("Disconnected from the server");
         }
 
         synchronized (mainThreadInput) {

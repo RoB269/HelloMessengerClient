@@ -4,6 +4,7 @@ import com.github.rob269.helloMessengerClient.gui.LoginSceneController;
 import com.github.rob269.helloMessengerClient.gui.MainSceneController;
 import com.github.rob269.helloMessengerClient.gui.ServerIpInputSceneController;
 import com.github.rob269.helloMessengerClient.io.ResourcesIO;
+import com.github.rob269.helloMessengerClient.io.HMPServerIO;
 import com.github.rob269.helloMessengerClient.io.ServerIO;
 import com.github.rob269.helloMessengerClient.rsa.Guarantor;
 import com.github.rob269.helloMessengerClient.rsa.Key;
@@ -150,7 +151,7 @@ public class Main extends Application {
                 if (config.startsWith("guarantor_public_key")) {
                     String[] key = config.split("=")[1].split(",");
                     publicKey = new BigInteger[]{new BigInteger(key[0]), new BigInteger(key[1])};
-                } else if (config.startsWith("server_ip")) {
+                } else if (config.startsWith("server_ip") && serverIp.isEmpty()) {
                     serverIp = config.split("=")[1];
                 }
             }
@@ -187,10 +188,10 @@ public class Main extends Application {
                 ServerIO serverIO = null;
                 try {
                     Socket serverSocket = new Socket(serverIp, 5099);
-                    serverIO = new ServerIO(serverSocket);
+                    serverIO = new HMPServerIO(serverSocket);
                     serverSocket.setSoTimeout(3_000);
                     serverIO.init();
-                    if (!serverIO.isClosed() && serverIO.isInitialized()) {
+                    if (!serverIO.isClosed()) {
                         Messenger messenger = new Messenger(serverIO);
                         SideConnectionThread thread = new SideConnectionThread(messenger);
                         thread.setName("SideConnectionThread");
@@ -200,7 +201,7 @@ public class Main extends Application {
                         message = "OK";
                     }
                 } catch (IOException e) {
-                    LOGGER.warning("Can't connect to server\n" + LogFormatter.formatStackTrace(e));
+                    LOGGER.warning("Can't connect to server");
                     close(serverIO);
                     message = "Can't connect to server";
                     throw e;
@@ -219,7 +220,7 @@ public class Main extends Application {
                 }
                 break;
             } catch (Exception e) {
-                LOGGER.warning("Exception when connecting to the server" + LogFormatter.formatStackTrace(e));
+                LOGGER.warning("Exception when connecting to the server\n" + LogFormatter.formatStackTrace(e));
             }
         } while (connectTryCount < 2);
         return message;

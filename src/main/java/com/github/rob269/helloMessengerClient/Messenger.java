@@ -1,6 +1,8 @@
 package com.github.rob269.helloMessengerClient;
 
+import com.github.rob269.helloMessengerClient.io.Batch;
 import com.github.rob269.helloMessengerClient.io.HMPBatch;
+import com.github.rob269.helloMessengerClient.io.HMPServerIO;
 import com.github.rob269.helloMessengerClient.io.ServerIO;
 
 import java.io.IOException;
@@ -85,13 +87,12 @@ public class Messenger {
                     return null;
                 }
             }
-            HMPBatch batch = serverIO.writeBatch(81, 1, false);
+            Batch batch = serverIO.writeBatch(81, 1, false);
             batch.write(username);
             byte response = serverIO.readCommand();
             switch (response) {
                 case 54 -> {
                     String[] chatId = serverIO.readString().split("\\\\\\\\");
-                    System.out.println(chatId[1]);
                     Chat chat = new Chat(Long.parseLong(chatId[0]), username, Chat.Status.OK,
                             new Message(0, "null", getDate(chatId[1]), ""), true);
                     chats.put(chat.getChatId(), chat);
@@ -116,7 +117,7 @@ public class Messenger {
                 Main.controller.printMenuErrorMessage("Chat name contains forbidden symbols");
                 return null;
             }
-            HMPBatch batch = serverIO.writeBatch(82, 1, false);
+            Batch batch = serverIO.writeBatch(82, 1, false);
             batch.write(chatName);
             byte response = serverIO.readCommand();
             if (response == 54) {
@@ -141,7 +142,7 @@ public class Messenger {
                     return null;
                 }
             }
-            HMPBatch batch = serverIO.writeBatch(86, 1, false);
+            Batch batch = serverIO.writeBatch(86, 1, false);
             batch.write(chatId);
             byte response = serverIO.readCommand();
             switch (response) {
@@ -166,7 +167,7 @@ public class Messenger {
 
     public Message sendMessage(String message, long chatId) {
         try {
-            HMPBatch batch = serverIO.writeBatch(83, 2, false);
+            Batch batch = serverIO.writeBatch(83, 2, false);
             batch.write(chatId);
             batch.write(message);
             byte response = serverIO.readCommand();
@@ -201,7 +202,7 @@ public class Messenger {
 
     public void loadMessages(long chatId) throws IOException {
         if (chats.get(chatId).getMessages().isEmpty()) return;
-        HMPBatch batch = serverIO.writeBatch(84, 2, false);
+        Batch batch = serverIO.writeBatch(84, 2, false);
         batch.write(chatId);
         batch.write(chats.get(chatId).getMessages().getFirst().getMessageId() + "\\\\" + MESSAGE_PACK_SIZE + "\\\\;");
         byte response = serverIO.readCommand();
