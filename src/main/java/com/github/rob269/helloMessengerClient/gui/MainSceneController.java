@@ -5,7 +5,6 @@ import com.github.rob269.helloMessengerClient.util.Cursor;
 import com.github.rob269.helloMessengerClient.util.LinkedList;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
@@ -13,7 +12,6 @@ import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
@@ -26,12 +24,14 @@ import javafx.scene.text.Text;
 
 import java.io.IOException;
 import java.net.URL;
-import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.ResourceBundle;
 
 public class MainSceneController implements Initializable {
     private static final double maxMessageWidth = 290;
     private static boolean needScrollDown = false;
+    private static final Map<Long, Button> chatButtons = new HashMap<>();
 
     @FXML
     private VBox chats;
@@ -225,6 +225,7 @@ public class MainSceneController implements Initializable {
         Main.selectedChatId = button.getChatId();
         needScrollDown = true;
         contactName.setVisible(true);
+        button.getStyleClass().remove("chat-button-notified");
     }
 
     private void addMessagesToPane(long chatId) {
@@ -248,15 +249,22 @@ public class MainSceneController implements Initializable {
         chatButton.getStyleClass().add("chat-button");
         chatButton.setOnAction(this::onChatButton);
         chats.getChildren().add(chatButton);
+        chatButtons.put(chat.getChatId(), chatButton);
     }
 
     public void clearChats() {
         chats.getChildren().clear();
     }
 
-    public void addReceivedMessage() {
-        needScrollDown = scrollPane.getVvalue() == 1;
-        addMessage(Main.messenger.getChats().get(Main.selectedChatId).getMessages().getLast());
+    public void handleReceivedMessage(long chatId) {
+        if (chatId == Main.selectedChatId) {
+            needScrollDown = scrollPane.getVvalue() == 1;
+            addMessage(Main.messenger.getChats().get(Main.selectedChatId).getMessages().getLast());
+        }
+        else {
+            if (!chatButtons.get(chatId).getStyleClass().contains("chat-button-notified"))
+                chatButtons.get(chatId).getStyleClass().add("chat-button-notified");
+        }
     }
 
     public void addMessage(Message message) {

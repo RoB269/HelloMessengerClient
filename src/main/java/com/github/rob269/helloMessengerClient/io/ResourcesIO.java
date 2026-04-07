@@ -11,8 +11,28 @@ import java.util.List;
 import java.util.logging.Logger;
 
 public class ResourcesIO {
-    private static final Logger LOGGER = Logger.getLogger(Thread.currentThread().getName() + ":" + ResourcesIO.class.getName());
-    public static final String appdataPath = System.getenv("APPDATA") + "\\Hello Messenger\\";
+    private static final Logger LOGGER = Logger.getLogger(ResourcesIO.class.getName());
+    private static String resourcesPath = System.getenv("APPDATA") + "\\Hello Messenger\\";
+    private static boolean isFinal = false;
+
+    public static void setResourcesPath(String path) throws IOException{
+        if (!isFinal) {
+            if (!path.isEmpty()) {
+                resourcesPath = path;
+            }
+            isFinal = true;
+            File resourcesFolder = new File(resourcesPath);
+            if (!resourcesFolder.exists()) {
+                if (!resourcesFolder.mkdirs()) {
+                    throw new IOException("Can't create resources folder");
+                }
+            }
+        }
+    }
+
+    public static String getResourcesPath() {
+        return resourcesPath;
+    }
 
     public static List<String> read(String filePath) {
         List<String> lines = new ArrayList<>();
@@ -37,7 +57,8 @@ public class ResourcesIO {
 
     public synchronized static void write(String filePath, List<String> lines, boolean append) {
         File file = new File(filePath);
-        if (!file.getParentFile().exists()) {
+        File f;
+        if (((f = file.getParentFile()) != null) && f.exists()) {
             file.getParentFile().mkdirs();
         }
         if (!file.exists()) {

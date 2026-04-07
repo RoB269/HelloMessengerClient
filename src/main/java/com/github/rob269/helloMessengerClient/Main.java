@@ -6,8 +6,6 @@ import com.github.rob269.helloMessengerClient.gui.ServerIpInputSceneController;
 import com.github.rob269.helloMessengerClient.io.ResourcesIO;
 import com.github.rob269.helloMessengerClient.io.HMPServerIO;
 import com.github.rob269.helloMessengerClient.io.ServerIO;
-import com.github.rob269.helloMessengerClient.rsa.Guarantor;
-import com.github.rob269.helloMessengerClient.rsa.Key;
 import com.github.rob269.helloMessengerClient.io.WrongKeyException;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -20,61 +18,121 @@ import javafx.stage.WindowEvent;
 
 import java.io.File;
 import java.io.IOException;
-import java.math.BigInteger;
 import java.net.Socket;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.logging.LogManager;
-import java.util.logging.Logger;
+import java.util.logging.*;
 
 public class Main extends Application {
     private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
     public static Stage stage;
     private static String serverIp = "";
+    private static int port = -1;
     public volatile static Messenger messenger = null;
     public static MainSceneController controller;
     public static long selectedChatId = -1;
+    public static Config configParser = new HMPConfig();
     public static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     public static void setServerIp(String ip) {
-        if (serverIp.isEmpty()) serverIp = ip;
+        if (serverIp.isEmpty()) {
+            if (ip.contains(":")) {
+                serverIp = ip.split(":")[0];
+                port = Integer.parseInt(ip.split(":")[1]);
+            }
+            else serverIp = ip;
+        }
+    }
+
+    public static void setPort(int val) {
+        if (port == -1) port = val;
     }
 
     public static void main(String[] args) {
-        File logsDir = new File(ResourcesIO.appdataPath + "logs\\");
-        if (!logsDir.exists()) {
-            logsDir.mkdirs();
+        String resourcesPath = "";
+        String configPath = "";
+        for (int i = 0; i < args.length; i++) {
+            switch (args[i]) {
+                case "-login" -> {
+                    if (i + 2 < args.length) {
+                        Client.login(args[i + 1], args[i + 2]);
+                        i += 2;
+                    } else {
+                        LOGGER.warning("Login arguments exception");
+                    }
+                }
+                case "-ip" -> {
+                    if (i + 1 < args.length) {
+                        setServerIp(args[++i]);
+                    } else {
+                        LOGGER.warning("Ip argument exception");
+                    }
+                }
+                case "-port" -> {
+                    if (i + 1 < args.length) {
+                        setPort(Integer.parseInt(args[++i]));
+                    } else {
+                        LOGGER.warning("Port argument exception");
+                    }
+                }
+                case "-configs" -> {
+                    if (i + 1 < args.length) {
+                        configPath = args[++i];
+                    } else {
+                        LOGGER.warning("Configs path argument exception");
+                    }
+                }
+                case "-resources" -> {
+                    if (i + 1 < args.length) {
+                        resourcesPath = args[++i];
+                    } else {
+                        LOGGER.warning("Resources path argument exception");
+                    }
+                }
+            }
+        }
+        boolean isResourcesFolderOk = true;
+        try {
+            ResourcesIO.setResourcesPath(resourcesPath);
+            File logsDir = new File(ResourcesIO.getResourcesPath() + "logs\\");
+            if (!logsDir.exists()) {
+                logsDir.mkdirs();
+            }
+        } catch (IOException e) {
+            LOGGER.warning("Can't create resources folder");
+            isResourcesFolderOk = false;
         }
         try {
             LogManager.getLogManager().readConfiguration(Objects.requireNonNull(Main.class.getResource("log.properties")).openStream());
+            if (isResourcesFolderOk) {
+                Logger rootLogger = Logger.getLogger("");
+                FileHandler fileHandler = getFileHandler(resourcesPath.isEmpty() ? "" : resourcesPath + "logs/log%g-%u.txt");
+                rootLogger.addHandler(fileHandler);
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
-        for (int i = 0; i < args.length; i++) {
-            if (args[i].equals("-login")) {
-                if (i+2<args.length) {
-                    Client.login(args[i + 1], args[i + 2]);
-                    i += 2;
-                }
-                else {
-                    LOGGER.warning("Login arguments exception");
-                }
-            }
-            else if (args[i].equals("-ip")) {
-                if (i+1 < args.length) {
-                    serverIp = args[++i];
-                }
-                else {
-                    LOGGER.warning("Ip argument exception");
-                }
-            }
-        }
-        parseConfigFile(ResourcesIO.appdataPath + "config");
+        configParser.parseConfigFile(configPath.isEmpty() ? ResourcesIO.getResourcesPath() + "config" : configPath);
+        setPort(5099);
         launch();
+    }
+
+    private static FileHandler getFileHandler(String pattern) throws IOException {
+        LogManager logManager = LogManager.getLogManager();
+        String limit = logManager.getProperty("fileHandler.limit");
+        String count = logManager.getProperty("fileHandler.count");
+        String level = logManager.getProperty("fileHandler.level");
+        if (pattern.isEmpty()) {
+            pattern = logManager.getProperty("fileHandler.pattern");
+        }
+        FileHandler fileHandler = new FileHandler(pattern,
+                limit == null ? 10485760 : Integer.parseInt(limit),
+                count == null ? 5 : Integer.parseInt(count), true);
+        fileHandler.setLevel(Level.parse(level));
+        fileHandler.setFormatter(new LogFormatter());
+        return fileHandler;
     }
 
     @Override
@@ -136,44 +194,7 @@ public class Main extends Application {
         for (Long id : ids) controller.addChat(map.get(id));
     }
 
-    private static void parseConfigFile(String file) {
-        try {
-            if (!ResourcesIO.isExist(file)) {
-                ResourcesIO.write(file, new ArrayList<>());
-                throw new RuntimeException();
-            }
-            BigInteger[] publicKey = null;
-            StringBuilder builder = new StringBuilder();
-            List<String> lines = ResourcesIO.read(file);
-            for (String line : lines) builder.append(line);
-            String[] configs = builder.toString().replaceAll(" ", "").split(";");
-            for (String config : configs) {
-                if (config.startsWith("guarantor_public_key")) {
-                    String[] key = config.split("=")[1].split(",");
-                    publicKey = new BigInteger[]{new BigInteger(key[0]), new BigInteger(key[1])};
-                } else if (config.startsWith("server_ip") && serverIp.isEmpty()) {
-                    serverIp = config.split("=")[1];
-                }
-            }
-            if (publicKey != null) {
-                Guarantor.init(new Key(publicKey));
-            } else {
-                throw new RuntimeException();
-            }
-            if (!file.equals(ResourcesIO.appdataPath + "config")) {
-                ResourcesIO.write(ResourcesIO.appdataPath + "config", lines);
-            }
-        } catch (RuntimeException e) {
-            if (!file.equals("defConfig")) {
-                LOGGER.warning("The configuration file doesn't contain the necessary data");
-                parseConfigFile("defConfig");
-            }
-            else {
-                LOGGER.severe("Default configuration file doesn't exist");
-                throw new RuntimeException();
-            }
-        }
-    }
+
 
     public synchronized static String serverConnect() {
         String message = "";
@@ -184,10 +205,10 @@ public class Main extends Application {
                 if (connectTryCount == 0) LOGGER.warning("Attempt to connect to the server");
                 else LOGGER.warning("Repeated attempt to connect to the server");
                 connectTryCount++;
-                Client.initKeys();
+                HMPClient.initKeys();
                 ServerIO serverIO = null;
                 try {
-                    Socket serverSocket = new Socket(serverIp, 5099);
+                    Socket serverSocket = new Socket(serverIp, port);
                     serverIO = new HMPServerIO(serverSocket);
                     serverSocket.setSoTimeout(3_000);
                     serverIO.init();

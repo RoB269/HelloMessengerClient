@@ -42,4 +42,9 @@ public class LoginSceneController {
             errorMessage.setVisible(true);
         }
     }
+
+    @FXML
+    void onSettingsButton() {
+        System.out.println(123);
+    }
 }

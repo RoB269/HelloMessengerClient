@@ -13,8 +13,8 @@ import java.util.*;
 import java.util.logging.Logger;
 
 public class Messenger {
-    public static final int MESSAGE_PACK_SIZE = 30;
     private static final Logger LOGGER = Logger.getLogger(Messenger.class.getName());
+    public static final int MESSAGE_PACK_SIZE = 30;
     private final Map<Long, Chat> chats = new HashMap<>();
     private final List<Long> chatIds = new ArrayList<>();
     private final ServerIO serverIO;

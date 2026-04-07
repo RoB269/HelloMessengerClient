@@ -1,9 +1,6 @@
 package com.github.rob269.helloMessengerClient.io;
 
-import com.github.rob269.helloMessengerClient.AuthenticationException;
-import com.github.rob269.helloMessengerClient.Client;
-import com.github.rob269.helloMessengerClient.InitializationException;
-import com.github.rob269.helloMessengerClient.LogFormatter;
+import com.github.rob269.helloMessengerClient.*;
 import com.github.rob269.helloMessengerClient.rsa.Guarantor;
 import com.github.rob269.helloMessengerClient.rsa.Key;
 import com.github.rob269.helloMessengerClient.rsa.RSA;
@@ -20,16 +17,20 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 public class HMPServerIO implements ServerIO, Closeable {
-    private static final Map<Byte, String> commands = new HashMap<>();
+    private static final Logger LOGGER = Logger.getLogger(HMPServerIO.class.getName());
+
+    private static final Map<Byte, String> commands = new HashMap<>();//todo Commands int -> Class
     static {
+        //Side commands
         commands.put((byte) -10, "Sending new message");
         commands.put((byte) -11, "Sending new chat");
-        commands.put((byte) 0, "Exit");
-        commands.put((byte) 99, "Exit");
+        //Init commands
+        commands.put((byte) 0, "Disconnect");
         commands.put((byte) 10, "Get Server public key");
         commands.put((byte) 20, "User sending his public key");
         commands.put((byte) 21, "Login");
         commands.put((byte) 30, "Check initialization");
+        //OK
         commands.put((byte) 50, "OK");
         commands.put((byte) 51, "Sending server public key");
         commands.put((byte) 52, "User successfully authenticated");
@@ -38,6 +39,7 @@ public class HMPServerIO implements ServerIO, Closeable {
         commands.put((byte) 55, "Message is successfully sent");
         commands.put((byte) 56, "Sending messages from database");
         commands.put((byte) 57, "You joined the chat");
+        //Error
         commands.put((byte) 60, "Error");
         commands.put((byte) 61, "Authentication error");
         commands.put((byte) 62, "Chat already exist");
@@ -51,6 +53,7 @@ public class HMPServerIO implements ServerIO, Closeable {
         commands.put((byte) 70, "User blocked in this chat");
         commands.put((byte) 71, "Wrong params");
         commands.put((byte) 72, "User already in the chat");
+        //Commands
         commands.put((byte) 80, "Get chats");
         commands.put((byte) 81, "Create new private chat");
         commands.put((byte) 82, "Create new public chat");
@@ -59,6 +62,7 @@ public class HMPServerIO implements ServerIO, Closeable {
         commands.put((byte) 85, "Add user to the chat");
         commands.put((byte) 86, "Join the chat");
         commands.put((byte) 90, "Ping");
+        commands.put((byte) 99, "Disconnect");
     }
     private Socket serverSocket;
     private DataOutputStream dos;
@@ -66,10 +70,8 @@ public class HMPServerIO implements ServerIO, Closeable {
     private static Key serverKey;
     private boolean isClosed = false;
     private boolean initialized = false;
-    private InputRouter router;
+    private HMPInputRouter router;
     private static final String serverName = "#SERVER#";
-
-    private static final Logger LOGGER = Logger.getLogger(Thread.currentThread().getName() + ":" + HMPServerIO.class.getName());
 
     public HMPServerIO(Socket serverSocket) {
         LOGGER.info("Using HMP");
@@ -77,7 +79,7 @@ public class HMPServerIO implements ServerIO, Closeable {
             this.serverSocket = serverSocket;
             dos = new DataOutputStream(serverSocket.getOutputStream());
             dis = new DataInputStream(serverSocket.getInputStream());
-            router = new InputRouter(dis, this);
+            router = new HMPInputRouter(dis, this);
             router.setName("InputRouterThread");
             router.start();
             LOGGER.fine("Output and Input streams is open");
@@ -110,7 +112,7 @@ public class HMPServerIO implements ServerIO, Closeable {
     public void init() throws WrongKeyException, InitializationException, IOException, AuthenticationException {
         if (serverKey == null) requestServerKey();
         HMPBatch batch = writeBatch(20, 2, false);
-        Key clientKey = Client.getPublicKey();
+        Key clientKey = HMPClient.getPublicKey();
         for (int i = 0; i < 2; i++) batch.write(clientKey.getKey()[i]);
         if (checkInitialization()) {
             initialized = true;

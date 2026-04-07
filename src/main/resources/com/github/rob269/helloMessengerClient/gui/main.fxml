@@ -18,7 +18,7 @@
 <?import javafx.scene.text.Font?>
 <?import javafx.scene.text.Text?>
 
-<AnchorPane fx:id="mainPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="600.0" prefWidth="800.0" stylesheets="@style.css" xmlns="http://javafx.com/javafx/24.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.github.rob269.helloMessengerClient.gui.MainSceneController">
+<AnchorPane fx:id="mainPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="600.0" prefWidth="800.0" style="-fx-background-color: #FFFFFF;" stylesheets="@style.css" xmlns="http://javafx.com/javafx/24.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.github.rob269.helloMessengerClient.gui.MainSceneController">
     <children>
       <MenuButton graphicTextGap="10.0" mnemonicParsing="false" prefHeight="80.0" prefWidth="270.0" text="Add chat" AnchorPane.leftAnchor="0.0" AnchorPane.topAnchor="0.0">
         <items>
@@ -78,15 +78,6 @@
             <VBox fx:id="messagesPane" alignment="BOTTOM_LEFT" prefHeight="440.0" prefWidth="337.0" />
          </content>
       </ScrollPane>
-      <Button layoutX="751.0" layoutY="12.0" mnemonicParsing="false" onAction="#onChatSettingsButton" styleClass="icon-button" AnchorPane.rightAnchor="31.0" AnchorPane.topAnchor="12.0">
-         <graphic>
-            <ImageView fitHeight="56.0" fitWidth="18.0" pickOnBounds="true" preserveRatio="true">
-               <image>
-                  <Image url="@../../../../../settingsButton18x56.png" />
-               </image>
-            </ImageView>
-         </graphic>
-      </Button>
       <StackPane fx:id="errorMessagePane" prefHeight="150.0" prefWidth="200.0" visible="false" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="270.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
          <children>
             <Rectangle fx:id="rectangle2" fill="#c2c2c266" height="600.0" stroke="BLACK" strokeType="INSIDE" strokeWidth="0.0" width="530.0" />
@@ -109,6 +100,15 @@
             </VBox>
          </children>
       </StackPane>
+<!--      <Button layoutX="751.0" layoutY="12.0" mnemonicParsing="false" onAction="#onChatSettingsButton" styleClass="icon-button" AnchorPane.rightAnchor="31.0" AnchorPane.topAnchor="12.0">todo-->
+<!--         <graphic>-->
+<!--            <ImageView fitHeight="56.0" fitWidth="18.0" pickOnBounds="true" preserveRatio="true">-->
+<!--               <image>-->
+<!--                  <Image url="@../../../../../settingsButton18x56.png" />-->
+<!--               </image>-->
+<!--            </ImageView>-->
+<!--         </graphic>-->
+<!--      </Button>-->
       <StackPane fx:id="menuPane" prefHeight="150.0" prefWidth="200.0" visible="false" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
          <children>
             <Rectangle fx:id="rectangle3" fill="#c2c2c255" height="600.0" stroke="BLACK" strokeType="INSIDE" strokeWidth="0.0" width="800.0" />

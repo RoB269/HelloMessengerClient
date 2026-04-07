@@ -1,6 +1,7 @@
 package com.github.rob269.helloMessengerClient.io;
 
 import com.github.rob269.helloMessengerClient.Client;
+import com.github.rob269.helloMessengerClient.HMPClient;
 import com.github.rob269.helloMessengerClient.rsa.RSA;
 
 import java.io.DataInputStream;
@@ -8,14 +9,14 @@ import java.io.IOException;
 import java.util.*;
 import java.util.logging.Logger;
 
-public class InputRouter extends Thread {
-    private static final Logger LOGGER = Logger.getLogger(InputRouter.class.getName());
+public class HMPInputRouter extends Thread {
+    private static final Logger LOGGER = Logger.getLogger(HMPInputRouter.class.getName());
     private final DataInputStream dis;
     public final Deque<byte[]> mainThreadInput = new ArrayDeque<>();
     public final Deque<byte[]> sideThreadInput = new ArrayDeque<>();
     private final HMPServerIO serverIO;
 
-    public InputRouter(DataInputStream dis, HMPServerIO serverIO) {
+    public HMPInputRouter(DataInputStream dis, HMPServerIO serverIO) {
         this.dis = dis;
         this.serverIO = serverIO;
     }
@@ -34,7 +35,7 @@ public class InputRouter extends Thread {
                 if (inputSize != 130 && (serverIO.isInitialized() || input[0] == 30)) {
                     break;
                 } else if (inputSize == 130) {
-                    input = RSA.decodeByteArray(input, Client.getPrivateKey());
+                    input = RSA.decodeByteArray(input, HMPClient.getPrivateKey());
                 }
                 int command = input[0];
 
@@ -72,7 +73,7 @@ public class InputRouter extends Thread {
                 int byteLength = dis.readInt();
                 byte[] bytes = new byte[byteLength];
                 dis.readFully(bytes);
-                if (serverIO.isInitialized()) bytes = RSA.decodeByteArray(bytes, Client.getPrivateKey());
+                if (serverIO.isInitialized()) bytes = RSA.decodeByteArray(bytes, HMPClient.getPrivateKey());
                 deque.add(bytes);
             }
         }
